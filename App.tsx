@@ -225,7 +225,12 @@ function App() {
           </div>
         </main>
         
-        <MobileNav activeView={activeView} setView={setActiveView} />
+        <MobileNav 
+          activeView={activeView} 
+          setView={setActiveView} 
+          onInstallApp={handleInstallApp}
+          canInstall={!!installPrompt}
+        />
         <ToastContainer toast={toast} />
       </div>
     </div>
