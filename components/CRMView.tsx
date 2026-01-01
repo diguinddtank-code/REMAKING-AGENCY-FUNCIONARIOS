@@ -55,6 +55,16 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
     setTasks(prevTasks => [newTask, ...prevTasks]);
     setIsModalOpen(false);
     setNewLead({ status: 'Potencial' });
+
+    // Trigger Notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification("Vantage CRM", {
+          body: `Novo cliente cadastrado com sucesso: ${lead.name}`,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+        });
+      } catch (e) { console.log("Notificação falhou", e); }
+    }
   };
 
   const deleteLead = (id: string) => setLeads(leads.filter(l => l.id !== id));
