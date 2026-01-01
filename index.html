@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Viewport settings for PWA: Prevent zoom, cover notch area -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Setup -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vantage">
+    <meta name="theme-color" content="#000000">
+
+    <title>Vantage | Agency OS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Embedded Manifest for PWA -->
+    <link rel="manifest" id="my-manifest-placeholder">
+    <script>
+      const manifest = {
+        "name": "Vantage Agency OS",
+        "short_name": "Vantage",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#000000",
+        "theme_color": "#000000",
+        "orientation": "portrait",
+        "icons": [
+          {
+            "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+            "sizes": "192x192",
+            "type": "image/png"
+          }
+        ]
+      };
+      const stringManifest = JSON.stringify(manifest);
+      const blob = new Blob([stringManifest], {type: 'application/manifest+json'});
+      const manifestURL = URL.createObjectURL(blob);
+      document.querySelector('#my-manifest-placeholder').setAttribute('href', manifestURL);
+    </script>
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              agency: {
+                black: '#050505',     // Main Background
+                900: '#121212',       // Cards / Sidebar
+                800: '#27272a',       // Borders
+                text: '#e4e4e7',      // Primary Text
+                sub: '#a1a1aa',       // Secondary Text
+              },
+              primary: {
+                500: '#6366f1', // Indigo/Violet - Main Brand
+                600: '#4f46e5',
+                glow: 'rgba(99, 102, 241, 0.5)'
+              },
+              success: {
+                500: '#10b981', // Emerald
+                glow: 'rgba(16, 185, 129, 0.5)'
+              },
+              warning: {
+                500: '#f59e0b', // Amber
+                glow: 'rgba(245, 158, 11, 0.5)'
+              }
+            },
+            boxShadow: {
+              'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
+              'sharp': '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+            },
+            animation: {
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        color: #e4e4e7;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior-y: none;
+        user-select: none;
+      }
+      
+      input, textarea {
+        user-select: text;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #050505; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333; 
+        border-radius: 3px;
+      }
+      
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+      .pt-safe { padding-top: env(safe-area-inset-top); }
+      
+      /* Glass Utility */
+      .glass-panel {
+        background: rgba(18, 18, 18, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
