@@ -221,7 +221,8 @@ function App() {
       />
       
       <div className="flex-1 flex flex-col relative h-full">
-        <Header title={activeView} />
+        {/* Pass setView to Header for Mobile Navigation */}
+        <Header title={activeView} setView={setActiveView} />
         
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 scroll-smooth pb-28 lg:pb-8 pt-4">
           <div className="max-w-7xl mx-auto">

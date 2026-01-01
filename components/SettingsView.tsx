@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Bell, Download, Smartphone, Monitor, ChevronRight, ShieldCheck, LogOut } from 'lucide-react';
+import { Moon, Sun, Bell, Download, Smartphone, ShieldCheck, LogOut, ChevronRight, Laptop } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface SettingsViewProps {
@@ -27,128 +27,113 @@ const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInsta
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-24 space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-white tracking-tighter mb-1">Configurações</h2>
-        <p className="text-agency-sub text-sm">Personalize sua experiência no REMAKING.</p>
-      </div>
-
-      {/* App Installation / Update Section */}
-      <div className="bg-gradient-to-br from-primary-900/40 to-agency-900 border border-primary-500/30 rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-             <div className="p-3 bg-primary-500/20 text-primary-500 rounded-xl">
-               <Smartphone size={24} />
+    <div className="max-w-xl mx-auto pb-32 space-y-6 pt-2">
+      
+      {/* App Install Banner (Mobile Priority) */}
+      <div className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-6 relative overflow-hidden shadow-glow">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-4">
+             <div className="p-2 bg-white/20 rounded-lg text-white backdrop-blur-sm">
+               {canInstall ? <Smartphone size={24} /> : <ShieldCheck size={24} />}
              </div>
-             <div>
-               <h3 className="text-lg font-bold text-white">Aplicativo Remaking</h3>
-               <p className="text-sm text-agency-sub">
-                 {canInstall 
-                   ? "Instale o app para melhor performance e acesso offline." 
-                   : "O aplicativo já está instalado ou rodando no navegador."}
-               </p>
-             </div>
+             <h3 className="text-lg font-bold text-white leading-tight">
+               {canInstall ? "Instalar App" : "App Ativo"}
+             </h3>
           </div>
           
-          {canInstall ? (
+          <p className="text-white/80 text-sm mb-5 leading-relaxed">
+             {canInstall 
+               ? "Instale o REMAKING na tela inicial para acesso offline e melhor performance." 
+               : "Você está usando a versão mais recente do aplicativo."}
+          </p>
+
+          {canInstall && (
             <button 
               onClick={onInstallApp}
-              className="px-6 py-3 bg-primary-600 text-white font-bold rounded-lg shadow-glow hover:bg-primary-500 transition-all flex items-center gap-2 uppercase text-xs tracking-wider"
+              className="w-full py-3.5 bg-white text-primary-700 font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 text-sm uppercase tracking-wide"
             >
-              <Download size={16} /> Instalar
+              <Download size={18} /> Instalar Agora
             </button>
-          ) : (
-            <div className="flex items-center gap-2 text-success-500 text-xs font-bold uppercase tracking-widest bg-success-500/10 px-4 py-2 rounded-lg border border-success-500/20">
-              <ShieldCheck size={14} /> Ativo
-            </div>
           )}
         </div>
       </div>
 
-      {/* Preferences Grid */}
-      <div className="grid gap-4">
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Preferências</h3>
         
         {/* Theme Toggle */}
-        <motion.div 
-          className="bg-agency-900 border border-agency-800 p-5 rounded-xl flex items-center justify-between hover:border-agency-sub/30 transition-colors"
-          whileHover={{ scale: 1.01 }}
+        <button 
+          onClick={toggleTheme}
+          className="w-full bg-agency-900 border border-agency-800 p-4 rounded-xl flex items-center justify-between active:bg-agency-800 transition-colors"
         >
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-agency-black rounded-lg text-agency-text border border-agency-800">
+            <div className="p-2.5 bg-black rounded-lg text-white border border-agency-800">
               {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
             </div>
-            <div>
-              <p className="font-bold text-white text-sm">Aparência</p>
-              <p className="text-xs text-agency-sub">Alternar entre modo claro e escuro</p>
+            <div className="text-left">
+              <p className="font-bold text-white text-base">Tema</p>
+              <p className="text-xs text-agency-sub">{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</p>
             </div>
           </div>
-          
-          <button 
-            onClick={toggleTheme}
-            className="relative inline-flex h-6 w-11 items-center rounded-full bg-agency-800 border border-agency-sub/20 transition-colors"
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition transition-transform duration-200 ${
-                theme === 'light' ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </motion.div>
+          <div className="relative h-6 w-11 rounded-full bg-agency-800 border border-agency-sub/20 pointer-events-none">
+            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-all duration-300 ${theme === 'light' ? 'translate-x-5' : ''}`} />
+          </div>
+        </button>
 
         {/* Notification Toggle */}
-        <motion.div 
-          className="bg-agency-900 border border-agency-800 p-5 rounded-xl flex items-center justify-between hover:border-agency-sub/30 transition-colors"
-          whileHover={{ scale: 1.01 }}
+        <button 
+          onClick={requestNotification}
+          disabled={notificationPermission === 'granted'}
+          className="w-full bg-agency-900 border border-agency-800 p-4 rounded-xl flex items-center justify-between active:bg-agency-800 transition-colors disabled:opacity-80"
         >
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-agency-black rounded-lg text-agency-text border border-agency-800">
+            <div className="p-2.5 bg-black rounded-lg text-white border border-agency-800">
               <Bell size={20} />
             </div>
-            <div>
-              <p className="font-bold text-white text-sm">Notificações</p>
-              <p className="text-xs text-agency-sub">Alertas de tarefas e leads</p>
+            <div className="text-left">
+              <p className="font-bold text-white text-base">Notificações</p>
+              <p className="text-xs text-agency-sub">Alertas de CRM e Agenda</p>
             </div>
           </div>
           
-          <button 
-            onClick={requestNotification}
-            disabled={notificationPermission === 'granted'}
-            className={`text-xs font-bold uppercase tracking-wider px-4 py-2 rounded transition-all ${
-              notificationPermission === 'granted' 
-                ? 'text-success-500 bg-success-500/10 border border-success-500/20' 
-                : 'bg-primary-600 text-white hover:bg-primary-500 shadow-glow'
-            }`}
-          >
-            {notificationPermission === 'granted' ? 'Ativado' : 'Ativar'}
-          </button>
-        </motion.div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold uppercase tracking-wider ${notificationPermission === 'granted' ? 'text-success-500' : 'text-primary-500'}`}>
+               {notificationPermission === 'granted' ? 'On' : 'Off'}
+            </span>
+            <ChevronRight size={16} className="text-agency-sub" />
+          </div>
+        </button>
       </div>
 
-      {/* Account Info */}
-      <div className="pt-8 border-t border-agency-800">
-        <h3 className="text-sm font-bold text-agency-sub uppercase tracking-widest mb-4">Conta</h3>
-        <div className="bg-black border border-agency-800 rounded-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-tr from-gray-700 to-gray-900 rounded-full flex items-center justify-center text-white font-bold text-lg border border-agency-800">
+      {/* Account Section */}
+      <div className="pt-4 border-t border-agency-800/50 space-y-4">
+        <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Conta</h3>
+        
+        <div className="bg-black border border-agency-800 rounded-xl p-5 flex items-center gap-4">
+            <div className="w-12 h-12 bg-agency-800 rounded-full flex items-center justify-center text-white font-bold text-lg border border-agency-700">
                {userEmail ? userEmail.substring(0,2).toUpperCase() : 'US'}
             </div>
-            <div>
-               <p className="text-white font-bold">{userEmail || 'Usuário'}</p>
-               <p className="text-agency-sub text-xs">Plano Premium • Vitalício</p>
+            <div className="flex-1 min-w-0">
+               <p className="text-white font-bold truncate">{userEmail || 'Usuário'}</p>
+               <div className="flex items-center gap-1.5 mt-0.5">
+                 <div className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse"></div>
+                 <p className="text-agency-sub text-xs">Sincronizado</p>
+               </div>
             </div>
-          </div>
+        </div>
 
-          <button 
-             onClick={onLogout}
-             className="flex items-center justify-center gap-2 px-6 py-2 border border-red-900/50 bg-red-900/10 text-red-500 hover:bg-red-900/20 rounded font-bold text-xs uppercase tracking-wide transition-colors"
-          >
-            <LogOut size={16} /> Sair da Conta
-          </button>
-        </div>
-        <div className="mt-4 text-center">
-            <p className="text-[10px] text-agency-800">REMAKING OS v2.1.0 (Build 4092)</p>
-        </div>
+        <button 
+           onClick={onLogout}
+           className="w-full py-4 border border-red-900/30 bg-red-900/5 text-red-500 hover:bg-red-900/10 rounded-xl font-bold text-sm uppercase tracking-wide transition-colors flex items-center justify-center gap-2 active:scale-95"
+        >
+          <LogOut size={18} /> Sair da Conta
+        </button>
+      </div>
+      
+      <div className="text-center pb-safe">
+        <p className="text-[10px] text-agency-800 font-mono">REMAKING OS MOBILE v2.2</p>
       </div>
     </div>
   );
