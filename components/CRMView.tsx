@@ -59,9 +59,9 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
     // Trigger Notification
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification("Vantage CRM", {
+        new Notification("REMAKING", {
           body: `Novo cliente cadastrado com sucesso: ${lead.name}`,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+          icon: 'https://i.imgur.com/kL00omR.png'
         });
       } catch (e) { console.log("Notificação falhou", e); }
     }

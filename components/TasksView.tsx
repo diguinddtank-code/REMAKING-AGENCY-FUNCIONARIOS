@@ -31,9 +31,9 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
         const diffMinutes = Math.floor(diffMs / 60000);
         if ((diffMinutes <= 10 && diffMinutes >= 0) || (diffMinutes < 0 && diffMinutes > -2)) {
           try {
-            new Notification(`Vantage: ${task.category}`, {
+            new Notification(`REMAKING: ${task.category}`, {
               body: diffMinutes <= 0 ? `HORA DE FAZER: ${task.text}` : `Faltam ${diffMinutes} min: "${task.text}"`,
-              icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              icon: 'https://i.imgur.com/kL00omR.png',
               tag: task.id,
               renotify: true,
               silent: false,
