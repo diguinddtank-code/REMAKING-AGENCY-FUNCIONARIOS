@@ -14,6 +14,11 @@ export interface User {
   email: string;
 }
 
+export interface Financials {
+  salary: number;
+  expenses: number;
+}
+
 export interface DatabaseSchema {
   users: {
     [email: string]: {
@@ -84,4 +89,5 @@ export interface AppData {
   tasks: Task[];
   leads: Lead[];
   goals: Goal[];
+  financials: Financials;
 }

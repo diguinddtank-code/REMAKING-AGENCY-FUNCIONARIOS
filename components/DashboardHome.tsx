@@ -1,17 +1,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, CheckCircle2, Clock, DollarSign, Dumbbell, Briefcase, Bell, Trophy, Check, ArrowRight } from 'lucide-react';
-import { Task, Lead, Goal, StatCardProps } from '../types';
+import { TrendingUp, Users, CheckCircle2, Clock, DollarSign, Trophy, Check, Wallet, PieChart, TrendingDown, ArrowUpRight } from 'lucide-react';
+import { Task, Lead, Goal, StatCardProps, Financials } from '../types';
 
 interface DashboardHomeProps {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>; 
   leads: Lead[];
   goals: Goal[];
+  financials: Financials;
+  setFinancials: React.Dispatch<React.SetStateAction<Financials>>;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, trend, isPositive, icon: Icon }) => {
-  // Determine color based on label for variety
   let colorClass = "text-white";
   let bgClass = "bg-white/5";
   
@@ -42,7 +43,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, trend, isPositive, ic
   );
 };
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, goals }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, goals, financials, setFinancials }) => {
   const activeClients = leads.filter(l => l.status === 'Ativo');
   const monthlyRecurring = activeClients.reduce((acc, l) => acc + l.value, 0);
   
@@ -68,6 +69,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
       default: return 'text-gray-400 bg-gray-400/10';
     }
   };
+
+  // Financial Calculations
+  const remaining = financials.salary - financials.expenses;
+  const expensePercentage = financials.salary > 0 ? Math.min(100, Math.round((financials.expenses / financials.salary) * 100)) : 0;
+  const isDanger = expensePercentage > 90;
+  const isWarning = expensePercentage > 70;
 
   return (
     <div className="space-y-6 pb-4">
@@ -104,6 +111,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
         {/* Main Content: Daily Routine */}
         <div className="lg:col-span-2 space-y-6">
           <motion.div 
@@ -138,7 +146,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
                           : 'bg-agency-900 border-agency-800 hover:border-primary-500/30 hover:shadow-glow'
                       }`}
                     >
-                      {/* Checkbox */}
                       <button 
                         onClick={() => toggleTask(task.id)}
                         className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
@@ -150,7 +157,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
                         {task.completed && <Check size={14} className="text-black" />}
                       </button>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm md:text-base font-semibold truncate ${task.completed ? 'text-agency-sub line-through' : 'text-white'}`}>
                           {task.text}
@@ -172,13 +178,86 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
           </motion.div>
         </div>
 
-        {/* Sidebar Content: Active Clients Highlight */}
-        <div className="space-y-6">
+        {/* Sidebar Content */}
+        <div className="space-y-6 flex flex-col h-full">
+          
+          {/* New Financial Overview Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-agency-900 border border-agency-800 text-white rounded-xl p-6 relative overflow-hidden"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                 <Wallet size={18} className="text-warning-500" /> Fluxo de Caixa
+              </h3>
+              <div className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${isDanger ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-success-500/10 text-success-500 border-success-500/30'}`}>
+                {remaining >= 0 ? 'Positivo' : 'Atenção'}
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+               <div className="space-y-1">
+                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><ArrowUpRight size={10} /> Entradas / Salário</label>
+                 <div className="relative group">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-agency-sub text-xs">R$</span>
+                    <input 
+                      type="number" 
+                      value={financials.salary || ''} 
+                      onChange={(e) => setFinancials({...financials, salary: Number(e.target.value)})}
+                      placeholder="0.00"
+                      className="w-full bg-black border border-agency-800 rounded-lg py-2 pl-8 pr-3 text-sm font-bold text-white focus:border-warning-500 outline-none transition-colors"
+                    />
+                 </div>
+               </div>
+               
+               <div className="space-y-1">
+                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><TrendingDown size={10} /> Gastos Fixos Médios</label>
+                 <div className="relative group">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-agency-sub text-xs">R$</span>
+                    <input 
+                      type="number" 
+                      value={financials.expenses || ''} 
+                      onChange={(e) => setFinancials({...financials, expenses: Number(e.target.value)})}
+                      placeholder="0.00"
+                      className="w-full bg-black border border-agency-800 rounded-lg py-2 pl-8 pr-3 text-sm font-bold text-white focus:border-red-500 outline-none transition-colors"
+                    />
+                 </div>
+               </div>
+            </div>
+
+            <div className="bg-black/40 rounded-lg p-4 border border-agency-800">
+               <div className="flex justify-between items-end mb-1">
+                  <span className="text-xs text-agency-sub font-medium">Sobra Prevista</span>
+               </div>
+               <div className={`text-3xl font-bold tracking-tighter ${remaining < 0 ? 'text-red-500' : 'text-success-500'}`}>
+                 R$ {remaining.toLocaleString('pt-BR', { notation: "compact", maximumFractionDigits: 1 })}
+               </div>
+               
+               <div className="mt-3">
+                 <div className="flex justify-between text-[10px] text-agency-sub uppercase font-bold mb-1">
+                   <span>Comprometido</span>
+                   <span>{expensePercentage}%</span>
+                 </div>
+                 <div className="h-1.5 w-full bg-agency-800 rounded-full overflow-hidden">
+                   <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: `${Math.min(100, expensePercentage)}%` }}
+                     className={`h-full rounded-full ${isDanger ? 'bg-red-500' : isWarning ? 'bg-warning-500' : 'bg-success-500'}`}
+                   />
+                 </div>
+               </div>
+            </div>
+          </motion.div>
+
+
+          {/* Active Clients Card */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-gray-900 to-black border border-agency-800 text-white rounded-xl p-6 h-full relative overflow-hidden min-h-[300px]"
+            className="bg-gradient-to-br from-gray-900 to-black border border-agency-800 text-white rounded-xl p-6 flex-1 relative overflow-hidden min-h-[300px]"
           >
              {/* Decorative blob */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -196,7 +275,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
               <div className="space-y-4 relative z-10">
                 {activeClients
                   .sort((a, b) => b.value - a.value)
-                  .slice(0, 4)
+                  .slice(0, 3) // Reduced to 3 to fit
                   .map((lead, index) => (
                   <div key={lead.id} className="bg-white/5 p-4 rounded-lg flex justify-between items-center group cursor-default hover:bg-white/10 border border-transparent hover:border-white/10 transition-all duration-300">
                     <div className="flex items-center gap-3">
@@ -218,7 +297,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
               </div>
             )}
             
-            <div className="mt-8 pt-6 border-t border-white/10 relative z-10">
+            <div className="mt-auto pt-6 border-t border-white/10 relative z-10">
                <div className="flex justify-between items-end">
                  <div>
                     <div className="text-xs font-bold uppercase tracking-widest mb-1 text-primary-500">LTV Projetado</div>

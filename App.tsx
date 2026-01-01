@@ -9,7 +9,7 @@ import GoalsView from './components/GoalsView';
 import ReportsView from './components/ReportsView';
 import SettingsView from './components/SettingsView';
 import AuthScreen from './components/AuthScreen';
-import { ViewState, Task, Lead, Goal, User, DatabaseSchema } from './types';
+import { ViewState, Task, Lead, Goal, User, DatabaseSchema, Financials } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
@@ -43,6 +43,7 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [financials, setFinancials] = useState<Financials>({ salary: 0, expenses: 0 });
 
   // --- Theme State ---
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -106,6 +107,7 @@ function App() {
       setTasks(currentTasks);
       setLeads(userData.data.leads || []);
       setGoals(userData.data.goals || []);
+      setFinancials(userData.data.financials || { salary: 0, expenses: 0 });
     }
     setTimeout(() => setIsAuthChecking(false), 500);
   }, []);
@@ -114,10 +116,10 @@ function App() {
     if (!isAuthenticated || !user) return;
     const db = getDB();
     if (db.users[user.email]) {
-      db.users[user.email].data = { tasks, leads, goals };
+      db.users[user.email].data = { tasks, leads, goals, financials };
       saveDB(db);
     }
-  }, [tasks, leads, goals, isAuthenticated, user]);
+  }, [tasks, leads, goals, financials, isAuthenticated, user]);
 
   const handleLogin = (email: string, pass: string): boolean => {
     const db = getDB();
@@ -136,8 +138,9 @@ function App() {
       }
 
       setTasks(currentTasks);
-      setLeads(targetUser.data.leads);
-      setGoals(targetUser.data.goals);
+      setLeads(targetUser.data.leads || []);
+      setGoals(targetUser.data.goals || []);
+      setFinancials(targetUser.data.financials || { salary: 0, expenses: 0 });
       db.lastUserEmail = email;
       saveDB(db);
       setIsAuthenticated(true);
@@ -158,7 +161,7 @@ function App() {
     db.users[email] = {
       password: pass,
       user: newUser,
-      data: { tasks: defaultTasks, leads: [], goals: [] }
+      data: { tasks: defaultTasks, leads: [], goals: [], financials: { salary: 0, expenses: 0 } }
     };
     db.lastUserEmail = email;
     saveDB(db);
@@ -166,6 +169,7 @@ function App() {
     setTasks(defaultTasks);
     setLeads([]);
     setGoals([]);
+    setFinancials({ salary: 0, expenses: 0 });
     setIsAuthenticated(true);
     showToast('Acesso concedido. Rotina iniciada.', 'success');
     return true;
@@ -180,6 +184,7 @@ function App() {
     setTasks([]);
     setLeads([]);
     setGoals([]);
+    setFinancials({ salary: 0, expenses: 0 });
     showToast('Sessão encerrada.', 'success');
   };
 
@@ -234,7 +239,16 @@ function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
               >
-                {activeView === 'dashboard' && <DashboardHome tasks={tasks} setTasks={setTasks} leads={leads} goals={goals} />}
+                {activeView === 'dashboard' && (
+                  <DashboardHome 
+                    tasks={tasks} 
+                    setTasks={setTasks} 
+                    leads={leads} 
+                    goals={goals} 
+                    financials={financials}
+                    setFinancials={setFinancials}
+                  />
+                )}
                 {activeView === 'crm' && <CRMView leads={leads} setLeads={setLeads} tasks={tasks} setTasks={setTasks} />}
                 {activeView === 'tasks' && <TasksView tasks={tasks} setTasks={setTasks} />}
                 {activeView === 'goals' && <GoalsView goals={goals} setGoals={setGoals} />}
