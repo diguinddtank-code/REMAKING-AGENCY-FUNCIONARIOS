@@ -1,7 +1,7 @@
 
 import { LucideIcon } from "lucide-react";
 
-export type ViewState = 'dashboard' | 'crm' | 'tasks' | 'goals' | 'reports';
+export type ViewState = 'dashboard' | 'crm' | 'tasks' | 'goals' | 'reports' | 'settings';
 
 export interface NavItem {
   id: ViewState;

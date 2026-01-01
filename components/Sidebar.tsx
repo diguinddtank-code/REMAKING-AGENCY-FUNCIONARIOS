@@ -62,7 +62,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout, onInst
       <div className="p-6 border-t border-agency-800">
         <div className="flex items-center justify-between mb-6">
             <div className="flex gap-2">
-               <button className="text-agency-sub hover:text-white transition-colors" title="Configurações">
+               <button 
+                 onClick={() => setView('settings')}
+                 className={`transition-colors ${activeView === 'settings' ? 'text-white' : 'text-agency-sub hover:text-white'}`}
+                 title="Configurações"
+               >
                  <Settings size={20} strokeWidth={1.5} />
                </button>
                

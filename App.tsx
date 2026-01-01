@@ -7,6 +7,7 @@ import CRMView from './components/CRMView';
 import TasksView from './components/TasksView';
 import GoalsView from './components/GoalsView';
 import ReportsView from './components/ReportsView';
+import SettingsView from './components/SettingsView';
 import AuthScreen from './components/AuthScreen';
 import { ViewState, Task, Lead, Goal, User, DatabaseSchema } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,6 +44,11 @@ function App() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
 
+  // --- Theme State ---
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+  });
+
   // --- PWA Install State ---
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
@@ -67,6 +73,18 @@ function App() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  // Theme Effect
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     const db = getDB();
@@ -193,7 +211,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-agency-black text-agency-text font-sans selection:bg-primary-500 selection:text-white overflow-hidden">
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-agency-black' : 'bg-gray-100'} text-agency-text font-sans selection:bg-primary-500 selection:text-white overflow-hidden transition-colors duration-300`}>
       <Sidebar 
         activeView={activeView} 
         setView={setActiveView} 
@@ -220,6 +238,16 @@ function App() {
                 {activeView === 'tasks' && <TasksView tasks={tasks} setTasks={setTasks} />}
                 {activeView === 'goals' && <GoalsView goals={goals} setGoals={setGoals} />}
                 {activeView === 'reports' && <ReportsView tasks={tasks} leads={leads} />}
+                {activeView === 'settings' && (
+                  <SettingsView 
+                    theme={theme} 
+                    toggleTheme={toggleTheme} 
+                    onInstallApp={handleInstallApp}
+                    canInstall={!!installPrompt}
+                    onLogout={handleLogout}
+                    userEmail={user?.email}
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
