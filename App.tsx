@@ -43,6 +43,9 @@ function App() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
 
+  // --- PWA Install State ---
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
   // --- Toast Notification State ---
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -50,6 +53,20 @@ function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  useEffect(() => {
+    // PWA Install Event Listener
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault(); // Prevent automatic mini-infobar
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     const db = getDB();
@@ -148,6 +165,16 @@ function App() {
     showToast('Sessão encerrada.', 'success');
   };
 
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+      showToast('Aplicativo instalado com sucesso!', 'success');
+    }
+  };
+
   if (isAuthChecking) {
     return (
       <div className="h-screen w-screen bg-agency-black flex items-center justify-center">
@@ -167,7 +194,13 @@ function App() {
 
   return (
     <div className="flex h-screen bg-agency-black text-agency-text font-sans selection:bg-primary-500 selection:text-white overflow-hidden">
-      <Sidebar activeView={activeView} setView={setActiveView} onLogout={handleLogout} />
+      <Sidebar 
+        activeView={activeView} 
+        setView={setActiveView} 
+        onLogout={handleLogout} 
+        onInstallApp={handleInstallApp}
+        canInstall={!!installPrompt}
+      />
       
       <div className="flex-1 flex flex-col relative h-full">
         <Header title={activeView} />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Briefcase, CheckSquare, Target, Settings, LogOut, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, CheckSquare, Target, Settings, LogOut, BarChart3, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ViewState, NavItem } from '../types';
 
@@ -7,6 +7,8 @@ interface SidebarProps {
   activeView: ViewState;
   setView: (view: ViewState) => void;
   onLogout: () => void;
+  onInstallApp?: () => void;
+  canInstall?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -17,7 +19,7 @@ const navItems: NavItem[] = [
   { id: 'reports', label: 'Relatórios', icon: BarChart3 },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout, onInstallApp, canInstall }) => {
   return (
     <motion.aside 
       initial={{ x: -100, opacity: 0 }}
@@ -59,9 +61,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout }) => {
       {/* Footer / User */}
       <div className="p-6 border-t border-agency-800">
         <div className="flex items-center justify-between mb-6">
-            <button className="text-agency-sub hover:text-white transition-colors">
-              <Settings size={20} strokeWidth={1.5} />
-            </button>
+            <div className="flex gap-2">
+               <button className="text-agency-sub hover:text-white transition-colors" title="Configurações">
+                 <Settings size={20} strokeWidth={1.5} />
+               </button>
+               
+               {canInstall && (
+                 <button 
+                   onClick={onInstallApp} 
+                   className="text-primary-500 hover:text-white transition-colors animate-pulse" 
+                   title="Instalar Aplicativo na Área de Trabalho"
+                 >
+                   <Download size={20} strokeWidth={1.5} />
+                 </button>
+               )}
+            </div>
+
             <button 
               onClick={onLogout}
               className="text-agency-sub hover:text-red-500 transition-colors"
