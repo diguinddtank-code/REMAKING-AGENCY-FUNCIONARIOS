@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign } from 'lucide-react';
+import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lead, Task } from '../types';
 
@@ -41,7 +41,8 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
       status: 'Potencial',
       lastContact: new Date().toLocaleDateString('pt-BR'),
       phone: newLead.phone || '',
-      notes: ''
+      notes: '',
+      payments: {}
     };
     const newTask: Task = {
       id: `auto-task-${Date.now()}`,
@@ -81,6 +82,26 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
       setEditingNoteLead(null);
       setNoteText('');
     }
+  };
+
+  const togglePayment = (leadId: string) => {
+    const today = new Date();
+    const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    
+    setLeads(leads.map(l => {
+        if (l.id !== leadId) return l;
+        
+        const currentStatus = l.payments?.[currentMonthKey] || 'Pending';
+        const newStatus = currentStatus === 'Pending' ? 'Paid' : 'Pending';
+        
+        return { 
+            ...l, 
+            payments: { 
+                ...l.payments, 
+                [currentMonthKey]: newStatus 
+            } 
+        };
+    }));
   };
 
   return (
@@ -150,6 +171,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
                moveLead={moveLead} 
                deleteLead={deleteLead} 
                openNoteModal={openNoteModal}
+               togglePayment={togglePayment}
              />
           ))}
         </div>
@@ -177,6 +199,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
                      moveLead={moveLead} 
                      deleteLead={deleteLead} 
                      openNoteModal={openNoteModal}
+                     togglePayment={togglePayment}
                    />
                  ))
                )}
@@ -288,7 +311,7 @@ const InputGroup = ({ icon: Icon, label, value, onChange, placeholder, type = "t
   </div>
 );
 
-const Column = ({ col, leads, moveLead, deleteLead, openNoteModal }: any) => (
+const Column = ({ col, leads, moveLead, deleteLead, openNoteModal, togglePayment }: any) => (
   <div className={`min-w-[85vw] md:min-w-[320px] flex-1 flex flex-col rounded-xl p-4 border border-agency-800 bg-agency-900/50`}>
     <div className={`flex items-center gap-2 mb-4 px-1 border-b pb-2 ${col.borderColor}`}>
       <span className={`font-bold text-sm uppercase tracking-wider ${col.color}`}>{col.label}</span>
@@ -298,42 +321,75 @@ const Column = ({ col, leads, moveLead, deleteLead, openNoteModal }: any) => (
     </div>
     <div className="flex-1 space-y-3 overflow-y-auto scrollbar-thin pr-1">
       {leads.filter((l: Lead) => l.status === col.id).map((lead: Lead) => (
-        <LeadCard key={lead.id} lead={lead} moveLead={moveLead} deleteLead={deleteLead} openNoteModal={openNoteModal} />
+        <LeadCard 
+          key={lead.id} 
+          lead={lead} 
+          moveLead={moveLead} 
+          deleteLead={deleteLead} 
+          openNoteModal={openNoteModal} 
+          togglePayment={togglePayment}
+        />
       ))}
     </div>
   </div>
 );
 
-const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal }: any) => (
-  <motion.div 
-    layoutId={lead.id}
-    className="bg-black p-4 rounded border border-agency-800 hover:border-primary-500 transition-colors group relative w-full shadow-lg"
-  >
-    <div className="flex justify-between items-start mb-2 gap-2">
-      <span className="font-bold text-white text-base truncate flex-1 min-w-0">{lead.name}</span>
-      <div className="flex gap-2 flex-shrink-0">
-        <button onClick={(e) => { e.stopPropagation(); openNoteModal(lead); }} className="text-agency-sub hover:text-white"><FileText size={14} /></button>
-        <button onClick={() => deleteLead(lead.id)} className="text-agency-sub hover:text-red-500"><Trash2 size={14} /></button>
-      </div>
-    </div>
-    <div className="text-xs text-agency-sub mb-4 flex items-center gap-1">
-      <Building2 size={10} /> {lead.company}
-    </div>
-    
-    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-3 border-t border-agency-800 gap-3">
-      <span className="font-mono font-bold text-success-500 text-sm">
-        {lead.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
-      </span>
-      
-      <div className="flex gap-2 flex-wrap justify-end sm:justify-end">
-         {lead.status !== 'Ativo' && <ActionButton onClick={() => moveLead(lead.id, 'Ativo')} text="Fechar" primary />}
-         {lead.status === 'Ativo' && <ActionButton onClick={() => moveLead(lead.id, 'Arquivado')} text="Arquivar" />}
-         {lead.status === 'Potencial' && <ActionButton onClick={() => moveLead(lead.id, 'Negociacao')} text="Negociar" />}
-         {lead.status === 'Negociacao' && <ActionButton onClick={() => moveLead(lead.id, 'Potencial')} text="Voltar" />}
-      </div>
-    </div>
-  </motion.div>
-);
+const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal, togglePayment }: any) => {
+    const today = new Date();
+    const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = today.toLocaleDateString('pt-BR', { month: 'long' });
+    const paymentStatus = lead.payments?.[currentMonthKey] || 'Pending';
+    const isPaid = paymentStatus === 'Paid';
+
+    return (
+      <motion.div 
+        layoutId={lead.id}
+        className="bg-black p-4 rounded border border-agency-800 hover:border-primary-500 transition-colors group relative w-full shadow-lg"
+      >
+        <div className="flex justify-between items-start mb-2 gap-2">
+          <span className="font-bold text-white text-base truncate flex-1 min-w-0">{lead.name}</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); openNoteModal(lead); }} className="text-agency-sub hover:text-white"><FileText size={14} /></button>
+            <button onClick={() => deleteLead(lead.id)} className="text-agency-sub hover:text-red-500"><Trash2 size={14} /></button>
+          </div>
+        </div>
+        <div className="text-xs text-agency-sub mb-4 flex items-center gap-1">
+          <Building2 size={10} /> {lead.company}
+        </div>
+        
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-3 border-t border-agency-800 gap-3">
+          <span className="font-mono font-bold text-success-500 text-sm">
+            {lead.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+          </span>
+          
+          <div className="flex gap-2 flex-wrap justify-end sm:justify-end">
+             {lead.status !== 'Ativo' && <ActionButton onClick={() => moveLead(lead.id, 'Ativo')} text="Fechar" primary />}
+             {lead.status === 'Ativo' && <ActionButton onClick={() => moveLead(lead.id, 'Arquivado')} text="Arquivar" />}
+             {lead.status === 'Potencial' && <ActionButton onClick={() => moveLead(lead.id, 'Negociacao')} text="Negociar" />}
+             {lead.status === 'Negociacao' && <ActionButton onClick={() => moveLead(lead.id, 'Potencial')} text="Voltar" />}
+          </div>
+        </div>
+
+        {/* Payment Toggle Section - Only for Active Clients */}
+        {lead.status === 'Ativo' && (
+            <div className="mt-3 pt-3 border-t border-agency-800 flex items-center justify-between">
+                <span className="text-[10px] text-agency-sub uppercase font-bold tracking-wider capitalize">Mês {monthName}:</span>
+                <button 
+                    onClick={() => togglePayment(lead.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border transition-all duration-300 text-[10px] font-bold uppercase tracking-wider ${
+                        isPaid 
+                        ? 'bg-success-500/10 border-success-500 text-success-500 hover:bg-success-500/20' 
+                        : 'bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20 animate-pulse'
+                    }`}
+                >
+                    {isPaid ? <Check size={12} /> : null}
+                    {isPaid ? 'Pago' : 'Pendente'}
+                </button>
+            </div>
+        )}
+      </motion.div>
+    );
+};
 
 const ActionButton = ({ onClick, text, primary }: any) => (
   <button 

@@ -48,6 +48,7 @@ export interface Lead {
   lastContact: string;
   phone?: string;
   notes?: string;
+  payments?: { [yearMonth: string]: 'Paid' | 'Pending' }; // Ex: "2023-12": "Paid"
 }
 
 export interface Goal {

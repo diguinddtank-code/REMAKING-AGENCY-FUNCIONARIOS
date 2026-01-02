@@ -87,6 +87,37 @@ function App() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  // --- Check and Generate Daily Tasks for Clients ---
+  const ensureDailyClientTasks = (currentTasks: Task[], currentLeads: Lead[]): Task[] => {
+    const today = new Date().toISOString().split('T')[0];
+    const activeClients = currentLeads.filter(l => l.status === 'Ativo');
+    
+    // Get existing task texts for today to avoid duplicates
+    const existingTaskTexts = new Set(
+      currentTasks
+        .filter(t => t.date === today)
+        .map(t => t.text)
+    );
+
+    const newClientTasks: Task[] = [];
+    
+    activeClients.forEach(client => {
+      const taskText = `Otimizar: ${client.name}`;
+      if (!existingTaskTexts.has(taskText)) {
+        newClientTasks.push({
+          id: `auto-client-${client.id}-${Date.now()}`,
+          text: taskText,
+          completed: false,
+          time: '09:00',
+          category: 'Trabalho',
+          date: today
+        });
+      }
+    });
+
+    return [...newClientTasks, ...currentTasks];
+  };
+
   useEffect(() => {
     const db = getDB();
     if (db.lastUserEmail && db.users[db.lastUserEmail]) {
@@ -94,18 +125,22 @@ function App() {
       setUser(userData.user);
       setIsAuthenticated(true);
       
-      // Merge stored tasks with defaults if they don't exist for today
       let currentTasks = userData.data.tasks || [];
+      const currentLeads = userData.data.leads || [];
       const today = new Date().toISOString().split('T')[0];
+
+      // 1. Ensure Defaults (Water, Gym, Study)
       const hasDefaults = currentTasks.some(t => t.date === today && (t.text.includes("água") || t.text.includes("agua")));
-      
       if (!hasDefaults) {
         const defaults = generateDefaultTasks(today);
         currentTasks = [...defaults, ...currentTasks];
       }
 
+      // 2. Ensure Client Tasks (Otimizar: Cliente)
+      currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
+
       setTasks(currentTasks);
-      setLeads(userData.data.leads || []);
+      setLeads(currentLeads);
       setGoals(userData.data.goals || []);
       setFinancials(userData.data.financials || { salary: 0, expenses: 0 });
     }
@@ -127,19 +162,23 @@ function App() {
     if (targetUser && targetUser.password === pass) {
       setUser(targetUser.user);
       
-      // Ensure defaults exist on login
       let currentTasks = targetUser.data.tasks || [];
+      const currentLeads = targetUser.data.leads || [];
       const today = new Date().toISOString().split('T')[0];
-      const hasDefaults = currentTasks.some(t => t.date === today && (t.text.includes("água") || t.text.includes("agua")));
       
+      // Ensure Defaults
+      const hasDefaults = currentTasks.some(t => t.date === today && (t.text.includes("água") || t.text.includes("agua")));
       if (!hasDefaults) {
          const defaults = generateDefaultTasks(today);
          currentTasks = [...defaults, ...currentTasks];
       }
 
+      // Ensure Client Tasks
+      currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
+
       setTasks(currentTasks);
-      setLeads(targetUser.data.leads || []);
-      setGoals(targetUser.data.goals || []);
+      setLeads(currentLeads);
+      setGoals(targetUser.data.goals);
       setFinancials(targetUser.data.financials || { salary: 0, expenses: 0 });
       db.lastUserEmail = email;
       saveDB(db);
