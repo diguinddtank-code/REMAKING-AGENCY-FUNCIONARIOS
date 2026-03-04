@@ -103,6 +103,7 @@ function App() {
   // --- Auth State ---
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   // --- App State ---
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
@@ -208,23 +209,45 @@ function App() {
     if (authLoading) return;
 
     const loadData = async () => {
-      let data = getLocalDB();
+      let localData = getLocalDB();
+      let finalData = localData;
       
       if (session?.user) {
         const remoteData = await fetchSupabaseRelational(session.user.id);
         if (remoteData) {
-          // Merge logic could go here, but for now remote is truth if exists
-          if (remoteData.tasks.length > 0 || remoteData.leads.length > 0) {
-             data = remoteData;
-          } else {
-             // First sync: save local to remote
-             await saveSupabaseRelational(data, session.user.id);
+          // Smart Merge: Combine local and remote data
+          // This prevents wiping local data if remote is empty (new account)
+          // and preserves remote data if it exists.
+          
+          const mergeArrays = <T extends { id: string }>(localArr: T[], remoteArr: T[]) => {
+            const map = new Map<string, T>();
+            // Add local first
+            localArr.forEach(i => map.set(i.id, i));
+            // Add remote second (overwrites local if same ID, acting as source of truth)
+            remoteArr.forEach(i => map.set(i.id, i));
+            return Array.from(map.values());
+          };
+
+          finalData = {
+            tasks: mergeArrays(localData.tasks || [], remoteData.tasks || []),
+            leads: mergeArrays(localData.leads || [], remoteData.leads || []),
+            transactions: mergeArrays(localData.transactions || [], remoteData.transactions || []),
+            goals: mergeArrays(localData.goals || [], remoteData.goals || []),
+            // For financials, use remote if it has data, otherwise keep local
+            financials: (remoteData.financials.salary > 0 || remoteData.financials.expenses > 0) 
+              ? remoteData.financials 
+              : (localData.financials || { salary: 0, expenses: 0 })
+          };
+
+          // If we merged data, we should sync the result back to both sources
+          if (JSON.stringify(finalData) !== JSON.stringify(remoteData)) {
+             saveSupabaseRelational(finalData, session.user.id);
           }
         }
       }
       
-      let currentTasks = data.tasks || [];
-      const currentLeads = data.leads || [];
+      let currentTasks = finalData.tasks || [];
+      const currentLeads = finalData.leads || [];
       const today = new Date().toISOString().split('T')[0];
 
       // 1. Ensure Defaults (Water, Gym, Study)
@@ -239,9 +262,9 @@ function App() {
 
       setTasks(currentTasks);
       setLeads(currentLeads);
-      setGoals(data.goals || []);
-      setFinancials(data.financials || { salary: 0, expenses: 0 });
-      setTransactions(data.transactions || []);
+      setGoals(finalData.goals || []);
+      setFinancials(finalData.financials || { salary: 0, expenses: 0 });
+      setTransactions(finalData.transactions || []);
       setIsLoading(false);
     };
     
@@ -282,8 +305,8 @@ function App() {
     );
   }
 
-  if (!session) {
-    return <AuthView onLogin={() => {}} />;
+  if (!session && !isOffline) {
+    return <AuthView onLogin={() => {}} onOffline={() => setIsOffline(true)} />;
   }
 
   return (

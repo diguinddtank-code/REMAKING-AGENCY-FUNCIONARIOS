@@ -5,9 +5,10 @@ import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
 interface AuthViewProps {
   onLogin: () => void;
+  onOffline: () => void;
 }
 
-const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
+const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -123,12 +124,28 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-4">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-agency-sub hover:text-white text-sm transition-colors"
+            className="text-agency-sub hover:text-white text-sm transition-colors block w-full"
           >
             {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Entre'}
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-agency-800"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-agency-900 px-2 text-agency-sub">Ou</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onOffline}
+            className="text-agency-sub hover:text-white text-xs transition-colors flex items-center justify-center gap-2 w-full py-2 hover:bg-white/5 rounded-lg"
+          >
+            Continuar sem conta (Offline)
           </button>
         </div>
       </motion.div>
