@@ -1,12 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, Briefcase, CheckSquare, Target, Settings, LogOut, BarChart3, Download } from 'lucide-react';
+import { LayoutDashboard, Briefcase, CheckSquare, Target, Settings, LogOut, BarChart3, Download, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ViewState, NavItem } from '../types';
 
 interface SidebarProps {
   activeView: ViewState;
   setView: (view: ViewState) => void;
-  onLogout: () => void;
   onInstallApp?: () => void;
   canInstall?: boolean;
 }
@@ -15,11 +14,12 @@ const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { id: 'crm', label: 'Clientes & CRM', icon: Briefcase },
   { id: 'tasks', label: 'Tarefas & Agenda', icon: CheckSquare },
+  { id: 'finance', label: 'Financeiro', icon: Wallet },
   { id: 'goals', label: 'Metas & Ações', icon: Target },
   { id: 'reports', label: 'Relatórios', icon: BarChart3 },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout, onInstallApp, canInstall }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onInstallApp, canInstall }) => {
   return (
     <motion.aside 
       initial={{ x: -100, opacity: 0 }}
@@ -80,14 +80,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setView, onLogout, onInst
                  </button>
                )}
             </div>
-
-            <button 
-              onClick={onLogout}
-              className="text-agency-sub hover:text-red-500 transition-colors"
-              title="Sair"
-            >
-              <LogOut size={20} strokeWidth={1.5} />
-            </button>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded bg-white text-black flex items-center justify-center font-bold text-xs">US</div>

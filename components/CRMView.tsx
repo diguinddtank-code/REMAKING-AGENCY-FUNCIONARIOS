@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign, Check, Upload, Paperclip } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lead, Task } from '../types';
+import { Lead, Task, ClientReport } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface CRMViewProps {
   leads: Lead[];
@@ -17,6 +18,8 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
   
   const [editingNoteLead, setEditingNoteLead] = useState<Lead | null>(null);
   const [noteText, setNoteText] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: { id: Lead['status']; label: string; color: string; borderColor: string; }[] = [
     { id: 'Potencial', label: 'Interesse', color: 'text-blue-400', borderColor: 'border-blue-500/30' },
@@ -81,6 +84,70 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
       setLeads(leads.map(l => l.id === editingNoteLead.id ? { ...l, notes: noteText } : l));
       setEditingNoteLead(null);
       setNoteText('');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingNoteLead || !supabase) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${editingNoteLead.id}-${Date.now()}.${fileExt}`;
+      const filePath = `reports/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('reports')
+        .getPublicUrl(filePath);
+
+      const newReport: ClientReport = {
+        id: Date.now().toString(),
+        name: file.name,
+        url: publicUrl,
+        date: new Date().toLocaleDateString('pt-BR')
+      };
+
+      const updatedLead = {
+        ...editingNoteLead,
+        reports: [...(editingNoteLead.reports || []), newReport]
+      };
+
+      setLeads(leads.map(l => l.id === editingNoteLead.id ? updatedLead : l));
+      setEditingNoteLead(updatedLead);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Erro ao fazer upload do arquivo. Verifique se o bucket "reports" existe no Supabase e é público.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const deleteReport = async (reportId: string, url: string) => {
+    if (!editingNoteLead || !supabase) return;
+    
+    try {
+      const filePath = url.split('/').pop();
+      if (filePath) {
+        await supabase.storage.from('reports').remove([`reports/${filePath}`]);
+      }
+      
+      const updatedLead = {
+        ...editingNoteLead,
+        reports: (editingNoteLead.reports || []).filter(r => r.id !== reportId)
+      };
+      
+      setLeads(leads.map(l => l.id === editingNoteLead.id ? updatedLead : l));
+      setEditingNoteLead(updatedLead);
+    } catch (error) {
+      console.error('Error deleting file:', error);
     }
   };
 
@@ -271,15 +338,74 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
                 <button onClick={() => setEditingNoteLead(null)} className="text-agency-sub hover:text-white"><X size={24} /></button>
               </div>
               
-              <textarea 
-                className="flex-1 w-full p-6 bg-black border border-agency-800 rounded-lg focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all resize-none text-white text-base leading-relaxed font-mono"
-                placeholder="Detalhes do projeto..."
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                autoFocus
-              />
+              <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden">
+                <div className="flex-1 flex flex-col">
+                  <label className="text-[10px] font-bold text-agency-sub uppercase tracking-widest mb-2">Anotações</label>
+                  <textarea 
+                    className="flex-1 w-full p-4 bg-black border border-agency-800 rounded-lg focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all resize-none text-white text-sm leading-relaxed font-mono"
+                    placeholder="Detalhes do projeto..."
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                  />
+                </div>
+                
+                <div className="w-full md:w-1/3 flex flex-col border-t md:border-t-0 md:border-l border-agency-800 pt-4 md:pt-0 md:pl-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="text-[10px] font-bold text-agency-sub uppercase tracking-widest">Relatórios</label>
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading || !supabase}
+                      className="text-xs flex items-center gap-1 bg-primary-600/20 text-primary-500 px-2 py-1 rounded hover:bg-primary-600/30 transition-colors disabled:opacity-50"
+                    >
+                      {isUploading ? <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /> : <Upload size={12} />}
+                      {isUploading ? 'Enviando...' : 'Anexar'}
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileUpload} 
+                      className="hidden" 
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
+                    />
+                  </div>
+                  
+                  {!supabase && (
+                    <div className="text-[10px] text-warning-500 bg-warning-500/10 p-2 rounded mb-4">
+                      Configure o Supabase no arquivo .env para habilitar uploads.
+                    </div>
+                  )}
+
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {(!editingNoteLead.reports || editingNoteLead.reports.length === 0) ? (
+                      <div className="text-center text-agency-sub text-xs py-8 border border-dashed border-agency-800 rounded-lg">
+                        Nenhum relatório anexado.
+                      </div>
+                    ) : (
+                      editingNoteLead.reports.map(report => (
+                        <div key={report.id} className="bg-black border border-agency-800 p-3 rounded-lg flex items-center justify-between group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Paperclip size={14} className="text-agency-sub flex-shrink-0" />
+                            <div className="min-w-0">
+                              <a href={report.url} target="_blank" rel="noopener noreferrer" className="text-xs text-white hover:text-primary-500 truncate block font-medium">
+                                {report.name}
+                              </a>
+                              <span className="text-[9px] text-agency-sub">{report.date}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => deleteReport(report.id, report.url)}
+                            className="text-agency-sub hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
               
-              <div className="flex justify-end mt-4 pt-4 border-t border-agency-800">
+              <div className="flex justify-end mt-6 pt-4 border-t border-agency-800">
                   <button onClick={saveNote} className="px-8 py-3 bg-white text-black rounded font-bold hover:bg-gray-200 text-sm uppercase tracking-wide flex items-center gap-2">
                     <FileText size={16} /> Salvar
                   </button>

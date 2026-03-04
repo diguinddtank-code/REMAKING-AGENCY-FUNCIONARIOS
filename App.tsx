@@ -8,21 +8,73 @@ import TasksView from './components/TasksView';
 import GoalsView from './components/GoalsView';
 import ReportsView from './components/ReportsView';
 import SettingsView from './components/SettingsView';
-import AuthScreen from './components/AuthScreen';
-import { ViewState, Task, Lead, Goal, User, DatabaseSchema, Financials } from './types';
+import FinanceView from './components/FinanceView';
+import { ViewState, Task, Lead, Goal, AppData, Financials, Transaction } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
-// --- Database Helper Functions ---
-const DB_KEY = 'vantage_db_v1';
+import { supabase } from './lib/supabase';
 
-const getDB = (): DatabaseSchema => {
+// --- Database Helper Functions ---
+const DB_KEY = 'vantage_db_v2';
+const SUPABASE_USER_ID = 'default_user';
+
+const getLocalDB = (): AppData => {
   const stored = localStorage.getItem(DB_KEY);
-  return stored ? JSON.parse(stored) : { users: {} };
+  if (stored) return JSON.parse(stored);
+  
+  const oldDbStr = localStorage.getItem('vantage_db_v1');
+  if (oldDbStr) {
+    try {
+      const oldDb = JSON.parse(oldDbStr);
+      if (oldDb.lastUserEmail && oldDb.users[oldDb.lastUserEmail]) {
+        const oldData = oldDb.users[oldDb.lastUserEmail].data;
+        return { ...oldData, transactions: oldData.transactions || [] };
+      }
+    } catch (e) {}
+  }
+  
+  return { tasks: [], leads: [], goals: [], financials: { salary: 0, expenses: 0 }, transactions: [] };
 };
 
-const saveDB = (db: DatabaseSchema) => {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
+const saveLocalDB = (data: AppData) => {
+  localStorage.setItem(DB_KEY, JSON.stringify(data));
+};
+
+const fetchSupabaseDB = async (): Promise<AppData | null> => {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('app_data')
+      .select('data')
+      .eq('id', SUPABASE_USER_ID)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Not found, return null to trigger insert
+        return null;
+      }
+      console.error('Error fetching from Supabase:', error);
+      return null;
+    }
+    return data?.data as AppData;
+  } catch (e) {
+    console.error('Supabase fetch error:', e);
+    return null;
+  }
+};
+
+const saveSupabaseDB = async (data: AppData) => {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase
+      .from('app_data')
+      .upsert({ id: SUPABASE_USER_ID, data }, { onConflict: 'id' });
+    if (error) console.error('Error saving to Supabase:', error);
+  } catch (e) {
+    console.error('Supabase save error:', e);
+  }
 };
 
 // --- Default Tasks Logic ---
@@ -33,17 +85,13 @@ const generateDefaultTasks = (date: string): Task[] => [
 ];
 
 function App() {
-  // --- Auth State ---
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
-
   // --- App State ---
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [financials, setFinancials] = useState<Financials>({ salary: 0, expenses: 0 });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // --- Theme State ---
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -118,15 +166,25 @@ function App() {
     return [...newClientTasks, ...currentTasks];
   };
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const db = getDB();
-    if (db.lastUserEmail && db.users[db.lastUserEmail]) {
-      const userData = db.users[db.lastUserEmail];
-      setUser(userData.user);
-      setIsAuthenticated(true);
+    const loadData = async () => {
+      let data = getLocalDB();
       
-      let currentTasks = userData.data.tasks || [];
-      const currentLeads = userData.data.leads || [];
+      if (supabase) {
+        const remoteData = await fetchSupabaseDB();
+        if (remoteData) {
+          data = remoteData;
+          saveLocalDB(data); // Sync local
+        } else {
+          // Initialize remote
+          await saveSupabaseDB(data);
+        }
+      }
+      
+      let currentTasks = data.tasks || [];
+      const currentLeads = data.leads || [];
       const today = new Date().toISOString().split('T')[0];
 
       // 1. Ensure Defaults (Water, Gym, Study)
@@ -141,91 +199,27 @@ function App() {
 
       setTasks(currentTasks);
       setLeads(currentLeads);
-      setGoals(userData.data.goals || []);
-      setFinancials(userData.data.financials || { salary: 0, expenses: 0 });
-    }
-    setTimeout(() => setIsAuthChecking(false), 500);
+      setGoals(data.goals || []);
+      setFinancials(data.financials || { salary: 0, expenses: 0 });
+      setTransactions(data.transactions || []);
+      setIsLoading(false);
+    };
+    
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !user) return;
-    const db = getDB();
-    if (db.users[user.email]) {
-      db.users[user.email].data = { tasks, leads, goals, financials };
-      saveDB(db);
-    }
-  }, [tasks, leads, goals, financials, isAuthenticated, user]);
-
-  const handleLogin = (email: string, pass: string): boolean => {
-    const db = getDB();
-    const targetUser = db.users[email];
-    if (targetUser && targetUser.password === pass) {
-      setUser(targetUser.user);
-      
-      let currentTasks = targetUser.data.tasks || [];
-      const currentLeads = targetUser.data.leads || [];
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Ensure Defaults
-      const hasDefaults = currentTasks.some(t => t.date === today && (t.text.includes("água") || t.text.includes("agua")));
-      if (!hasDefaults) {
-         const defaults = generateDefaultTasks(today);
-         currentTasks = [...defaults, ...currentTasks];
-      }
-
-      // Ensure Client Tasks
-      currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
-
-      setTasks(currentTasks);
-      setLeads(currentLeads);
-      setGoals(targetUser.data.goals);
-      setFinancials(targetUser.data.financials || { salary: 0, expenses: 0 });
-      db.lastUserEmail = email;
-      saveDB(db);
-      setIsAuthenticated(true);
-      showToast(`Bem-vindo, ${targetUser.user.name.split(' ')[0]}`, 'success');
-      return true;
-    }
-    return false;
-  };
-
-  const handleRegister = (name: string, email: string, pass: string): boolean => {
-    const db = getDB();
-    if (db.users[email]) return false;
+    if (isLoading) return;
+    const data = { tasks, leads, goals, financials, transactions };
+    saveLocalDB(data);
     
-    const today = new Date().toISOString().split('T')[0];
-    const defaultTasks = generateDefaultTasks(today);
-
-    const newUser: User = { name, email };
-    db.users[email] = {
-      password: pass,
-      user: newUser,
-      data: { tasks: defaultTasks, leads: [], goals: [], financials: { salary: 0, expenses: 0 } }
-    };
-    db.lastUserEmail = email;
-    saveDB(db);
-    setUser(newUser);
-    setTasks(defaultTasks);
-    setLeads([]);
-    setGoals([]);
-    setFinancials({ salary: 0, expenses: 0 });
-    setIsAuthenticated(true);
-    showToast('Acesso concedido. Rotina iniciada.', 'success');
-    return true;
-  };
-
-  const handleLogout = () => {
-    const db = getDB();
-    db.lastUserEmail = undefined;
-    saveDB(db);
-    setIsAuthenticated(false);
-    setUser(null);
-    setTasks([]);
-    setLeads([]);
-    setGoals([]);
-    setFinancials({ salary: 0, expenses: 0 });
-    showToast('Sessão encerrada.', 'success');
-  };
+    // Debounce Supabase save to avoid too many requests
+    const timeoutId = setTimeout(() => {
+      saveSupabaseDB(data);
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [tasks, leads, goals, financials, transactions, isLoading]);
 
   const handleInstallApp = async () => {
     if (!installPrompt) return;
@@ -237,20 +231,11 @@ function App() {
     }
   };
 
-  if (isAuthChecking) {
+  if (isLoading) {
     return (
       <div className="h-screen w-screen bg-agency-black flex items-center justify-center">
          <div className="w-12 h-12 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <>
-        <AuthScreen onLogin={handleLogin} onRegister={handleRegister} />
-        <ToastContainer toast={toast} />
-      </>
     );
   }
 
@@ -259,7 +244,6 @@ function App() {
       <Sidebar 
         activeView={activeView} 
         setView={setActiveView} 
-        onLogout={handleLogout} 
         onInstallApp={handleInstallApp}
         canInstall={!!installPrompt}
       />
@@ -286,10 +270,12 @@ function App() {
                     goals={goals} 
                     financials={financials}
                     setFinancials={setFinancials}
+                    transactions={transactions}
                   />
                 )}
                 {activeView === 'crm' && <CRMView leads={leads} setLeads={setLeads} tasks={tasks} setTasks={setTasks} />}
                 {activeView === 'tasks' && <TasksView tasks={tasks} setTasks={setTasks} />}
+                {activeView === 'finance' && <FinanceView transactions={transactions} setTransactions={setTransactions} />}
                 {activeView === 'goals' && <GoalsView goals={goals} setGoals={setGoals} />}
                 {activeView === 'reports' && <ReportsView tasks={tasks} leads={leads} />}
                 {activeView === 'settings' && (
@@ -298,8 +284,6 @@ function App() {
                     toggleTheme={toggleTheme} 
                     onInstallApp={handleInstallApp}
                     canInstall={!!installPrompt}
-                    onLogout={handleLogout}
-                    userEmail={user?.email}
                   />
                 )}
               </motion.div>

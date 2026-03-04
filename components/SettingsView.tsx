@@ -7,11 +7,9 @@ interface SettingsViewProps {
   toggleTheme: () => void;
   onInstallApp?: () => void;
   canInstall?: boolean;
-  onLogout: () => void;
-  userEmail?: string;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInstallApp, canInstall, onLogout, userEmail }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInstallApp, canInstall }) => {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -107,32 +105,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInsta
         </button>
       </div>
 
-      {/* Account Section */}
-      <div className="pt-4 border-t border-agency-800/50 space-y-4">
-        <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Conta</h3>
-        
-        <div className="bg-black border border-agency-800 rounded-xl p-5 flex items-center gap-4">
-            <div className="w-12 h-12 bg-agency-800 rounded-full flex items-center justify-center text-white font-bold text-lg border border-agency-700">
-               {userEmail ? userEmail.substring(0,2).toUpperCase() : 'US'}
-            </div>
-            <div className="flex-1 min-w-0">
-               <p className="text-white font-bold truncate">{userEmail || 'Usuário'}</p>
-               <div className="flex items-center gap-1.5 mt-0.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse"></div>
-                 <p className="text-agency-sub text-xs">Sincronizado</p>
-               </div>
-            </div>
-        </div>
-
-        <button 
-           onClick={onLogout}
-           className="w-full py-4 border border-red-900/30 bg-red-900/5 text-red-500 hover:bg-red-900/10 rounded-xl font-bold text-sm uppercase tracking-wide transition-colors flex items-center justify-center gap-2 active:scale-95"
-        >
-          <LogOut size={18} /> Sair da Conta
-        </button>
-      </div>
+      {/* Account Section Removed */}
       
-      <div className="text-center pb-safe">
+      <div className="text-center pb-safe mt-8">
         <p className="text-[10px] text-agency-800 font-mono">REMAKING OS MOBILE v2.2</p>
       </div>
     </div>

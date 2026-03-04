@@ -1,7 +1,7 @@
 
 import { LucideIcon } from "lucide-react";
 
-export type ViewState = 'dashboard' | 'crm' | 'tasks' | 'goals' | 'reports' | 'settings';
+export type ViewState = 'dashboard' | 'crm' | 'tasks' | 'goals' | 'reports' | 'settings' | 'finance';
 
 export interface NavItem {
   id: ViewState;
@@ -39,6 +39,13 @@ export interface Task {
   category: 'Trabalho' | 'Academia' | 'Lembrete';
 }
 
+export interface ClientReport {
+  id: string;
+  name: string;
+  url: string;
+  date: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -49,6 +56,7 @@ export interface Lead {
   phone?: string;
   notes?: string;
   payments?: { [yearMonth: string]: 'Paid' | 'Pending' }; // Ex: "2023-12": "Paid"
+  reports?: ClientReport[];
 }
 
 export interface Goal {
@@ -67,6 +75,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   date: string;
   category: string;
+  isFixed?: boolean;
 }
 
 export interface StatCardProps {
@@ -91,4 +100,5 @@ export interface AppData {
   leads: Lead[];
   goals: Goal[];
   financials: Financials;
+  transactions: Transaction[];
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Briefcase, CheckSquare, Target, BarChart3, Download } from 'lucide-react';
+import { LayoutDashboard, Briefcase, CheckSquare, Target, BarChart3, Download, Wallet } from 'lucide-react';
 import { ViewState, NavItem } from '../types';
 
 interface MobileNavProps {
@@ -13,8 +13,8 @@ const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
   { id: 'tasks', label: 'Agenda', icon: CheckSquare },
   { id: 'crm', label: 'CRM', icon: Briefcase },
+  { id: 'finance', label: 'Finanças', icon: Wallet },
   { id: 'reports', label: 'Relatórios', icon: BarChart3 },
-  { id: 'goals', label: 'Metas', icon: Target },
 ];
 
 const MobileNav: React.FC<MobileNavProps> = ({ activeView, setView, onInstallApp, canInstall }) => {

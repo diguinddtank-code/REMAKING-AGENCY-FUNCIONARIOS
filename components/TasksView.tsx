@@ -31,13 +31,23 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
         const diffMinutes = Math.floor(diffMs / 60000);
         if ((diffMinutes <= 10 && diffMinutes >= 0) || (diffMinutes < 0 && diffMinutes > -2)) {
           try {
-            new Notification(`REMAKING: ${task.category}`, {
+            const title = `REMAKING: ${task.category}`;
+            const options = {
               body: diffMinutes <= 0 ? `HORA DE FAZER: ${task.text}` : `Faltam ${diffMinutes} min: "${task.text}"`,
               icon: 'https://i.imgur.com/kL00omR.png',
               tag: task.id,
               renotify: true,
               silent: false,
-            } as any);
+            };
+            
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, options);
+              });
+            } else {
+              new Notification(title, options as any);
+            }
+            
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             notifiedTasks.current.add(task.id);
           } catch (error) { console.error("Erro notificação:", error); }
@@ -130,14 +140,14 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
             />
           </div>
 
-          <div className="flex items-center gap-2 px-2 pb-2 md:pb-0 justify-between md:justify-end border-t border-agency-800 md:border-t-0 pt-2 md:pt-0">
-             <div className="flex gap-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 px-2 pb-2 md:pb-0 justify-between md:justify-end border-t border-agency-800 md:border-t-0 pt-2 md:pt-0">
+             <div className="flex flex-wrap gap-1">
               {(['Trabalho', 'Academia', 'Lembrete'] as Task['category'][]).map(cat => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${getCategoryColor(cat, selectedCategory === cat)}`}
+                  className={`flex-1 sm:flex-none px-2 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${getCategoryColor(cat, selectedCategory === cat)}`}
                 >
                   {cat}
                 </button>
@@ -147,7 +157,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
             <button 
               type="submit"
               disabled={showSuccess}
-              className={`h-10 md:h-12 px-6 rounded flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-wide text-sm ${
+              className={`w-full sm:w-auto h-10 md:h-12 px-6 rounded flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-wide text-sm ${
                 showSuccess ? 'bg-success-500 text-white' : 'bg-white text-black hover:bg-gray-200'
               }`}
             >
@@ -160,7 +170,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
       </form>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6 border-b border-agency-800 pb-2">
+      <div className="flex flex-wrap gap-2 mb-6 border-b border-agency-800 pb-2">
         {['all', 'today', 'pending'].map((f) => (
           <button
             key={f}
@@ -197,24 +207,24 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
               >
                 <button 
                   onClick={() => toggleTask(task.id)}
-                  className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center mr-4 transition-all duration-300 ${
+                  className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center mr-3 sm:mr-4 transition-all duration-300 ${
                     task.completed ? 'bg-success-500 border-success-500' : 'border-agency-sub hover:border-primary-500'
                   }`}
                 >
                   {task.completed && <Check size={12} className="text-black" />}
                 </button>
                 
-                <div className="flex-1">
-                  <p className={`text-sm font-medium ${task.completed ? 'text-agency-sub line-through' : 'text-white'}`}>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium break-words ${task.completed ? 'text-agency-sub line-through' : 'text-white'}`}>
                     {task.text}
                   </p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-agency-sub">
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-agency-sub">
                     <span className={`uppercase font-bold tracking-wider text-[10px] px-1.5 py-0.5 rounded border ${getCategoryTagStyle(task.category)}`}>{task.category}</span>
-                    <span className="flex items-center gap-1 font-mono text-agency-sub"><Clock size={10} /> {task.time}</span>
+                    <span className="flex items-center gap-1 font-mono text-agency-sub whitespace-nowrap"><Clock size={10} /> {task.time}</span>
                   </div>
                 </div>
 
-                <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-2 text-agency-sub hover:text-red-500 transition-all">
+                <button onClick={() => deleteTask(task.id)} className="opacity-100 sm:opacity-0 group-hover:opacity-100 p-2 text-agency-sub hover:text-red-500 transition-all flex-shrink-0 ml-2">
                   <Trash2 size={16} />
                 </button>
               </motion.div>

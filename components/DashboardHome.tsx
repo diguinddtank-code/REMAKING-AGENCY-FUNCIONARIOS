@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, CheckCircle2, Clock, DollarSign, Trophy, Check, Wallet, PieChart, TrendingDown, ArrowUpRight } from 'lucide-react';
-import { Task, Lead, Goal, StatCardProps, Financials } from '../types';
+import { Task, Lead, Goal, StatCardProps, Financials, Transaction } from '../types';
 
 interface DashboardHomeProps {
   tasks: Task[];
@@ -10,6 +10,7 @@ interface DashboardHomeProps {
   goals: Goal[];
   financials: Financials;
   setFinancials: React.Dispatch<React.SetStateAction<Financials>>;
+  transactions?: Transaction[];
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, trend, isPositive, icon: Icon }) => {
@@ -43,9 +44,13 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, trend, isPositive, ic
   );
 };
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, goals, financials, setFinancials }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, goals, financials, setFinancials, transactions = [] }) => {
   const activeClients = leads.filter(l => l.status === 'Ativo');
   const monthlyRecurring = activeClients.reduce((acc, l) => acc + l.value, 0);
+  
+  // Calculate fixed expenses from transactions
+  const calculatedFixedExpenses = transactions.filter(t => t.type === 'expense' && t.isFixed).reduce((acc, t) => acc + t.amount, 0);
+  const displayExpenses = financials.expenses > 0 ? financials.expenses : calculatedFixedExpenses;
   
   const today = new Date().toISOString().split('T')[0];
   const todaysTasks = tasks.filter(t => t.date === today);
@@ -71,8 +76,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
   };
 
   // Financial Calculations
-  const remaining = financials.salary - financials.expenses;
-  const expensePercentage = financials.salary > 0 ? Math.min(100, Math.round((financials.expenses / financials.salary) * 100)) : 0;
+  const remaining = financials.salary - displayExpenses;
+  const expensePercentage = financials.salary > 0 ? Math.min(100, Math.round((displayExpenses / financials.salary) * 100)) : 0;
   const isDanger = expensePercentage > 90;
   const isWarning = expensePercentage > 70;
 
@@ -218,12 +223,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-agency-sub text-xs">R$</span>
                     <input 
                       type="number" 
-                      value={financials.expenses || ''} 
+                      value={displayExpenses || ''} 
                       onChange={(e) => setFinancials({...financials, expenses: Number(e.target.value)})}
                       placeholder="0.00"
                       className="w-full bg-black border border-agency-800 rounded-lg py-2 pl-8 pr-3 text-sm font-bold text-white focus:border-red-500 outline-none transition-colors"
                     />
                  </div>
+                 <p className="text-[9px] text-agency-sub mt-1">Sincronizado com Financeiro se vazio.</p>
                </div>
             </div>
 
