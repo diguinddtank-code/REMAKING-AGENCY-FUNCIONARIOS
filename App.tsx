@@ -9,31 +9,20 @@ import GoalsView from './components/GoalsView';
 import ReportsView from './components/ReportsView';
 import SettingsView from './components/SettingsView';
 import FinanceView from './components/FinanceView';
+import AuthView from './components/AuthView';
 import { ViewState, Task, Lead, Goal, AppData, Financials, Transaction } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 import { supabase } from './lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // --- Database Helper Functions ---
 const DB_KEY = 'vantage_db_v2';
-const SUPABASE_USER_ID = 'default_user';
 
 const getLocalDB = (): AppData => {
   const stored = localStorage.getItem(DB_KEY);
   if (stored) return JSON.parse(stored);
-  
-  const oldDbStr = localStorage.getItem('vantage_db_v1');
-  if (oldDbStr) {
-    try {
-      const oldDb = JSON.parse(oldDbStr);
-      if (oldDb.lastUserEmail && oldDb.users[oldDb.lastUserEmail]) {
-        const oldData = oldDb.users[oldDb.lastUserEmail].data;
-        return { ...oldData, transactions: oldData.transactions || [] };
-      }
-    } catch (e) {}
-  }
-  
   return { tasks: [], leads: [], goals: [], financials: { salary: 0, expenses: 0 }, transactions: [] };
 };
 
@@ -41,40 +30,66 @@ const saveLocalDB = (data: AppData) => {
   localStorage.setItem(DB_KEY, JSON.stringify(data));
 };
 
-const fetchSupabaseDB = async (): Promise<AppData | null> => {
+// --- Relational Sync Functions ---
+const fetchSupabaseRelational = async (userId: string): Promise<AppData | null> => {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase
-      .from('app_data')
-      .select('data')
-      .eq('id', SUPABASE_USER_ID)
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found, return null to trigger insert
-        return null;
-      }
-      console.error('Error fetching from Supabase:', error);
-      return null;
-    }
-    return data?.data as AppData;
+    const [tasks, leads, transactions, goals, financials] = await Promise.all([
+      supabase.from('tasks').select('*').eq('user_id', userId),
+      supabase.from('crm_leads').select('*').eq('user_id', userId),
+      supabase.from('transactions').select('*').eq('user_id', userId),
+      supabase.from('goals').select('*').eq('user_id', userId),
+      supabase.from('financials').select('*').eq('user_id', userId).single()
+    ]);
+
+    return {
+      tasks: tasks.data || [],
+      leads: leads.data || [],
+      transactions: transactions.data || [],
+      goals: goals.data || [],
+      financials: financials.data || { salary: 0, expenses: 0 }
+    };
   } catch (e) {
     console.error('Supabase fetch error:', e);
     return null;
   }
 };
 
-const saveSupabaseDB = async (data: AppData) => {
+const saveSupabaseRelational = async (data: AppData, userId: string) => {
   if (!supabase) return;
-  try {
-    const { error } = await supabase
-      .from('app_data')
-      .upsert({ id: SUPABASE_USER_ID, data }, { onConflict: 'id' });
-    if (error) console.error('Error saving to Supabase:', error);
-  } catch (e) {
-    console.error('Supabase save error:', e);
-  }
+  
+  const syncTable = async (tableName: string, localItems: any[], idField = 'id') => {
+    try {
+      // 1. Get all remote IDs
+      const { data: remoteItems } = await supabase!.from(tableName).select(idField).eq('user_id', userId);
+      const remoteIds = new Set(remoteItems?.map((i: any) => i[idField]) || []);
+      const localIds = new Set(localItems.map(i => i[idField]));
+
+      // 2. Identify deletions
+      const toDelete = [...remoteIds].filter(id => !localIds.has(id));
+      if (toDelete.length > 0) {
+        await supabase!.from(tableName).delete().in(idField, toDelete);
+      }
+
+      // 3. Upsert local items (add user_id)
+      if (localItems.length > 0) {
+        const itemsWithUser = localItems.map(item => ({ ...item, user_id: userId }));
+        const { error } = await supabase!.from(tableName).upsert(itemsWithUser);
+        if (error) console.error(`Error syncing ${tableName}:`, error);
+      }
+    } catch (e) {
+      console.error(`Sync error ${tableName}:`, e);
+    }
+  };
+
+  await Promise.all([
+    syncTable('tasks', data.tasks),
+    syncTable('crm_leads', data.leads),
+    syncTable('transactions', data.transactions),
+    syncTable('goals', data.goals),
+    // Financials is a single row per user
+    supabase.from('financials').upsert({ user_id: userId, ...data.financials })
+  ]);
 };
 
 // --- Default Tasks Logic ---
@@ -85,6 +100,10 @@ const generateDefaultTasks = (date: string): Task[] => [
 ];
 
 function App() {
+  // --- Auth State ---
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   // --- App State ---
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -108,6 +127,22 @@ function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  useEffect(() => {
+    // Check active session
+    supabase?.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase!.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     // PWA Install Event Listener
@@ -168,18 +203,23 @@ function App() {
 
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load Data Effect
   useEffect(() => {
+    if (authLoading) return;
+
     const loadData = async () => {
       let data = getLocalDB();
       
-      if (supabase) {
-        const remoteData = await fetchSupabaseDB();
+      if (session?.user) {
+        const remoteData = await fetchSupabaseRelational(session.user.id);
         if (remoteData) {
-          data = remoteData;
-          saveLocalDB(data); // Sync local
-        } else {
-          // Initialize remote
-          await saveSupabaseDB(data);
+          // Merge logic could go here, but for now remote is truth if exists
+          if (remoteData.tasks.length > 0 || remoteData.leads.length > 0) {
+             data = remoteData;
+          } else {
+             // First sync: save local to remote
+             await saveSupabaseRelational(data, session.user.id);
+          }
         }
       }
       
@@ -206,20 +246,23 @@ function App() {
     };
     
     loadData();
-  }, []);
+  }, [session, authLoading]);
 
+  // Save Data Effect
   useEffect(() => {
     if (isLoading) return;
     const data = { tasks, leads, goals, financials, transactions };
     saveLocalDB(data);
     
-    // Debounce Supabase save to avoid too many requests
-    const timeoutId = setTimeout(() => {
-      saveSupabaseDB(data);
-    }, 1000);
-    
-    return () => clearTimeout(timeoutId);
-  }, [tasks, leads, goals, financials, transactions, isLoading]);
+    if (session?.user) {
+      // Debounce Supabase save
+      const timeoutId = setTimeout(() => {
+        saveSupabaseRelational(data, session.user.id);
+      }, 2000); // Increased debounce to 2s to reduce writes
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [tasks, leads, goals, financials, transactions, isLoading, session]);
 
   const handleInstallApp = async () => {
     if (!installPrompt) return;
@@ -231,12 +274,16 @@ function App() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="h-screen w-screen bg-agency-black flex items-center justify-center">
          <div className="w-12 h-12 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  if (!session) {
+    return <AuthView onLogin={() => {}} />;
   }
 
   return (
