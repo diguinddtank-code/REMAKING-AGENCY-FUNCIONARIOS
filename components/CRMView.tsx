@@ -128,9 +128,9 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
 
       setLeads(leads.map(l => l.id === editingNoteLead.id ? updatedLead : l));
       setEditingNoteLead(updatedLead);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
-      alert('Erro ao fazer upload do arquivo. Verifique se o bucket "reports" existe no Supabase e é público.');
+      alert(`Erro ao fazer upload: ${error.message || 'Desconhecido'}\n\nPara corrigir:\n1. Crie um bucket chamado "reports" no Supabase.\n2. Marque o bucket como "Public".\n3. Adicione uma política (Policy) permitindo INSERT/SELECT para todos.\n4. Verifique se as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão configuradas na Vercel.`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

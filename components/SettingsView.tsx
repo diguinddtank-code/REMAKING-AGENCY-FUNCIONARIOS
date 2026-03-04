@@ -59,6 +59,33 @@ const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInsta
       </div>
 
       <div className="space-y-4">
+        <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Aplicativo</h3>
+        
+        {/* Install App Button */}
+        <button 
+          onClick={() => {
+            if (canInstall && onInstallApp) {
+              onInstallApp();
+            } else {
+              alert("Para instalar (Rebaixar) o aplicativo:\n\nNo iPhone (Safari): Toque no ícone de Compartilhar (quadrado com seta para cima) e selecione 'Adicionar à Tela de Início'.\n\nNo Android (Chrome): Toque no menu (três pontos) e selecione 'Adicionar à tela inicial'.");
+            }
+          }}
+          className="w-full bg-agency-900 border border-agency-800 p-4 rounded-xl flex items-center justify-between active:bg-agency-800 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-primary-600/20 rounded-lg text-primary-500 border border-primary-500/20">
+              <Download size={20} />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-white text-base">Baixar Aplicativo</p>
+              <p className="text-xs text-agency-sub">Instalar na tela inicial</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-agency-sub" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
         <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Preferências</h3>
         
         {/* Theme Toggle */}
