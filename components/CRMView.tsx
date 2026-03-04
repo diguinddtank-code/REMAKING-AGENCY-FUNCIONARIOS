@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign, Check, Upload, Paperclip } from 'lucide-react';
+import { Plus, Building2, Trash2, Wallet, Users, LayoutList, FileText, X, User, DollarSign, Check, Upload, Paperclip, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lead, Task, ClientReport } from '../types';
 import { supabase } from '../lib/supabase';
@@ -17,6 +17,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
   const [activeMobileTab, setActiveMobileTab] = useState<Lead['status']>('Ativo');
   
   const [editingNoteLead, setEditingNoteLead] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [noteText, setNoteText] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +70,12 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
         });
       } catch (e) { console.log("Notificação falhou", e); }
     }
+  };
+
+  const handleEditLead = () => {
+    if (!editingLead || !editingLead.name || !editingLead.value || editingLead.value <= 0) return;
+    setLeads(leads.map(l => l.id === editingLead.id ? editingLead : l));
+    setEditingLead(null);
   };
 
   const deleteLead = (id: string) => setLeads(leads.filter(l => l.id !== id));
@@ -239,6 +246,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
                deleteLead={deleteLead} 
                openNoteModal={openNoteModal}
                togglePayment={togglePayment}
+               setEditingLead={setEditingLead}
              />
           ))}
         </div>
@@ -267,6 +275,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
                      deleteLead={deleteLead} 
                      openNoteModal={openNoteModal}
                      togglePayment={togglePayment}
+                     setEditingLead={setEditingLead}
                    />
                  ))
                )}
@@ -314,6 +323,51 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
               <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-agency-800">
                 <button onClick={() => setIsModalOpen(false)} className="px-5 py-3 text-agency-sub hover:text-white text-sm transition-colors">Cancelar</button>
                 <button onClick={handleAddLead} className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded font-bold hover:shadow-glow text-sm uppercase tracking-wide">Salvar</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Lead Modal */}
+      <AnimatePresence>
+        {editingLead && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }}
+              className="bg-agency-900 border border-agency-800 rounded-xl w-full max-w-md p-6 md:p-8 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-8">
+                 <h3 className="text-lg font-bold text-white uppercase tracking-wide">Editar Cliente</h3>
+                 <button onClick={() => setEditingLead(null)} className="text-agency-sub hover:text-white"><X size={20} /></button>
+              </div>
+
+              <div className="space-y-4">
+                <InputGroup icon={User} label="Nome" value={editingLead.name} onChange={v => setEditingLead({...editingLead, name: v})} placeholder="Ex: Roberto Almeida" />
+                <InputGroup icon={Building2} label="Empresa/Serviço" value={editingLead.company} onChange={v => setEditingLead({...editingLead, company: v})} placeholder="Ex: Consultoria" />
+                <InputGroup 
+                  icon={DollarSign} 
+                  label="Valor Mensal" 
+                  value={editingLead.value} 
+                  onChange={v => {
+                    const val = parseFloat(v);
+                    if (v === '') {
+                        setEditingLead({...editingLead, value: 0});
+                    } else if (!isNaN(val) && val >= 0) {
+                        setEditingLead({...editingLead, value: val});
+                    }
+                  }} 
+                  placeholder="0.00" 
+                  type="number" 
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-agency-800">
+                <button onClick={() => setEditingLead(null)} className="px-5 py-3 text-agency-sub hover:text-white text-sm transition-colors">Cancelar</button>
+                <button onClick={handleEditLead} className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded font-bold hover:shadow-glow text-sm uppercase tracking-wide">Salvar</button>
               </div>
             </motion.div>
           </motion.div>
@@ -437,8 +491,8 @@ const InputGroup = ({ icon: Icon, label, value, onChange, placeholder, type = "t
   </div>
 );
 
-const Column = ({ col, leads, moveLead, deleteLead, openNoteModal, togglePayment }: any) => (
-  <div className={`min-w-[85vw] md:min-w-[320px] flex-1 flex flex-col rounded-xl p-4 border border-agency-800 bg-agency-900/50`}>
+const Column = ({ col, leads, moveLead, deleteLead, openNoteModal, togglePayment, setEditingLead }: any) => (
+  <div className={`min-w-[85vw] md:min-w-[180px] lg:min-w-[220px] xl:min-w-[280px] flex-1 flex flex-col rounded-xl p-4 border border-agency-800 bg-agency-900/50`}>
     <div className={`flex items-center gap-2 mb-4 px-1 border-b pb-2 ${col.borderColor}`}>
       <span className={`font-bold text-sm uppercase tracking-wider ${col.color}`}>{col.label}</span>
       <span className="ml-auto text-xs font-bold text-white bg-agency-800 px-2 py-0.5 rounded">
@@ -454,13 +508,14 @@ const Column = ({ col, leads, moveLead, deleteLead, openNoteModal, togglePayment
           deleteLead={deleteLead} 
           openNoteModal={openNoteModal} 
           togglePayment={togglePayment}
+          setEditingLead={setEditingLead}
         />
       ))}
     </div>
   </div>
 );
 
-const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal, togglePayment }: any) => {
+const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal, togglePayment, setEditingLead }: any) => {
     const today = new Date();
     const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     const monthName = today.toLocaleDateString('pt-BR', { month: 'long' });
@@ -475,6 +530,7 @@ const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal, togglePayment }: 
         <div className="flex justify-between items-start mb-2 gap-2">
           <span className="font-bold text-white text-base truncate flex-1 min-w-0">{lead.name}</span>
           <div className="flex gap-2 flex-shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }} className="text-agency-sub hover:text-white"><Edit size={14} /></button>
             <button onClick={(e) => { e.stopPropagation(); openNoteModal(lead); }} className="text-agency-sub hover:text-white"><FileText size={14} /></button>
             <button onClick={() => deleteLead(lead.id)} className="text-agency-sub hover:text-red-500"><Trash2 size={14} /></button>
           </div>

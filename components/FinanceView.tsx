@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { DollarSign, ArrowUpRight, ArrowDownRight, Plus, Wallet, Trash2, Repeat, Upload, Filter } from 'lucide-react';
+import { DollarSign, ArrowUpRight, ArrowDownRight, Plus, Wallet, Trash2, Repeat, Upload, Filter, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Transaction } from '../types';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -12,6 +12,7 @@ interface FinanceViewProps {
 const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>({ type: 'income', isFixed: false });
+  const [editingTrans, setEditingTrans] = useState<Transaction | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +70,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
     setNewTrans({ type: 'income', isFixed: false });
   };
 
+  const handleEditTransaction = () => {
+    if (!editingTrans || !editingTrans.description || !editingTrans.amount) return;
+    setTransactions(transactions.map(t => t.id === editingTrans.id ? editingTrans : t));
+    setEditingTrans(null);
+  };
+
   const handleDelete = (id: string) => {
     setTransactions(transactions.filter(t => t.id !== id));
   };
@@ -83,7 +90,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
       reader.onload = async (event) => {
         try {
           const base64Data = (event.target?.result as string).split(',')[1];
-          const mimeType = file.type;
+          let mimeType = file.type;
+          if (!mimeType) {
+            if (file.name.endsWith('.csv')) mimeType = 'text/csv';
+            else if (file.name.endsWith('.txt')) mimeType = 'text/plain';
+            else mimeType = 'application/octet-stream';
+          }
 
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -221,7 +233,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
               ref={fileInputRef} 
               onChange={handleUploadExtrato} 
               className="hidden" 
-              accept="image/*,application/pdf"
+              accept="image/*,application/pdf,text/csv,.csv,.txt"
             />
             <button 
               onClick={() => setIsModalOpen(true)}
@@ -254,9 +266,14 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
                   <span className={`font-bold whitespace-nowrap ${t.type === 'income' ? 'text-success-500' : 'text-red-500'}`}>
                     {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
-                  <button onClick={() => handleDelete(t.id)} className="opacity-0 group-hover:opacity-100 text-agency-sub hover:text-red-500 transition-colors p-2">
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setEditingTrans(t)} className="text-agency-sub hover:text-white p-2">
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(t.id)} className="text-agency-sub hover:text-red-500 p-2">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -316,6 +333,64 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
               <div className="flex justify-end gap-3 mt-8">
                 <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-agency-sub font-bold uppercase tracking-wider hover:text-white transition-colors">Cancelar</button>
                 <button onClick={handleAddTransaction} className="px-8 py-3 bg-primary-600 text-white rounded-xl font-bold uppercase tracking-wider hover:bg-primary-500 shadow-glow transition-colors">Confirmar</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+       {/* Edit Transaction Modal */}
+       <AnimatePresence>
+        {editingTrans && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95 }} animate={{ scale: 1 }}
+              className="bg-agency-900 border border-agency-800 rounded-3xl w-[95%] max-w-sm p-6 shadow-2xl"
+            >
+              <h3 className="text-xl font-bold mb-6 text-white">Editar Movimentação</h3>
+              <div className="space-y-4">
+                <div className="flex gap-2 p-1 bg-black rounded-xl border border-agency-800">
+                  {['income', 'expense'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setEditingTrans({...editingTrans, type: type as any})}
+                      className={`flex-1 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${
+                        editingTrans.type === type ? 'bg-agency-800 text-white' : 'text-agency-sub hover:text-white'
+                      }`}
+                    >
+                      {type === 'income' ? 'Entrada' : 'Saída'}
+                    </button>
+                  ))}
+                </div>
+                <input 
+                  className="w-full p-4 bg-black rounded-xl border border-agency-800 outline-none focus:border-primary-500 text-white placeholder:text-agency-sub font-medium"
+                  placeholder="Descrição (ex: Projeto X)"
+                  value={editingTrans.description || ''}
+                  onChange={e => setEditingTrans({...editingTrans, description: e.target.value})}
+                />
+                <input 
+                  type="number"
+                  className="w-full p-4 bg-black rounded-xl border border-agency-800 outline-none focus:border-primary-500 text-white placeholder:text-agency-sub font-medium"
+                  placeholder="Valor (R$)"
+                  value={editingTrans.amount || ''}
+                  onChange={e => setEditingTrans({...editingTrans, amount: Number(e.target.value)})}
+                />
+                
+                {editingTrans.type === 'expense' && (
+                  <div className="flex items-center gap-3 p-4 bg-black rounded-xl border border-agency-800 cursor-pointer group" onClick={() => setEditingTrans({...editingTrans, isFixed: !editingTrans.isFixed})}>
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${editingTrans.isFixed ? 'bg-primary-500 border-primary-500' : 'border-agency-sub group-hover:border-primary-500'}`}>
+                      {editingTrans.isFixed && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                    </div>
+                    <span className="text-sm font-bold text-white">Gasto Fixo Mensal</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-3 mt-8">
+                <button onClick={() => setEditingTrans(null)} className="px-6 py-3 text-agency-sub font-bold uppercase tracking-wider hover:text-white transition-colors">Cancelar</button>
+                <button onClick={handleEditTransaction} className="px-8 py-3 bg-primary-600 text-white rounded-xl font-bold uppercase tracking-wider hover:bg-primary-500 shadow-glow transition-colors">Salvar</button>
               </div>
             </motion.div>
           </motion.div>
