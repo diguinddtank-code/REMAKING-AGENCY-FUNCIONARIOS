@@ -36,7 +36,14 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin }) => {
       }
       onLogin();
     } catch (err: any) {
-      setError(err.message);
+      console.error("Auth error:", err);
+      if (err.message.includes("disabled") || err.message.includes("provider is not enabled")) {
+        setError("O login por Email/Senha não está habilitado. Vá no painel do Supabase > Authentication > Providers e habilite 'Email'.");
+      } else if (err.message.includes("Invalid login credentials")) {
+        setError("Email ou senha incorretos.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
