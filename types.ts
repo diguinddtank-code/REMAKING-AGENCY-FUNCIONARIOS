@@ -17,6 +17,7 @@ export interface User {
 export interface Financials {
   salary: number;
   expenses: number;
+  updatedAt?: number;
 }
 
 export interface DatabaseSchema {
@@ -36,7 +37,9 @@ export interface Task {
   completed: boolean;
   time: string; // HH:mm
   date: string; // YYYY-MM-DD
-  category: 'Trabalho' | 'Academia' | 'Lembrete';
+  category: 'Trabalho' | 'Academia' | 'Lembrete' | 'Outro';
+  repeat?: 'none' | 'daily' | 'weekly' | 'monthly';
+  parentId?: string;
 }
 
 export interface ClientReport {

@@ -12,6 +12,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const [filter, setFilter] = useState<'all' | 'today' | 'pending'>('all');
   const [newTaskText, setNewTaskText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Task['category']>('Trabalho');
+  const [selectedRepeat, setSelectedRepeat] = useState<Task['repeat']>('none');
   const [showSuccess, setShowSuccess] = useState(false);
   
   const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -38,6 +39,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
               tag: task.id,
               renotify: true,
               silent: false,
+              vibrate: [200, 100, 200]
             };
             
             if ('serviceWorker' in navigator) {
@@ -74,7 +76,8 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
       completed: false,
       date: today,
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      category: selectedCategory
+      category: selectedCategory,
+      repeat: selectedRepeat
     };
     setTasks([newTask, ...tasks]);
     setNewTaskText('');
@@ -152,6 +155,18 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                   {cat}
                 </button>
               ))}
+              
+              {/* Repeat Toggle */}
+              <select
+                value={selectedRepeat}
+                onChange={(e) => setSelectedRepeat(e.target.value as any)}
+                className="bg-black text-agency-sub text-[10px] font-bold uppercase tracking-wider border border-agency-800 rounded px-2 py-2 outline-none focus:border-primary-500"
+              >
+                <option value="none">Sem Repetição</option>
+                <option value="daily">Diário</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensal</option>
+              </select>
             </div>
             
             <button 
@@ -221,6 +236,11 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                   <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-agency-sub">
                     <span className={`uppercase font-bold tracking-wider text-[10px] px-1.5 py-0.5 rounded border ${getCategoryTagStyle(task.category)}`}>{task.category}</span>
                     <span className="flex items-center gap-1 font-mono text-agency-sub whitespace-nowrap"><Clock size={10} /> {task.time}</span>
+                    {task.repeat && task.repeat !== 'none' && (
+                      <span className="flex items-center gap-1 font-mono text-primary-500 whitespace-nowrap border border-primary-500/30 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase text-[9px]">
+                        {task.repeat === 'daily' ? 'Diário' : task.repeat === 'weekly' ? 'Semanal' : 'Mensal'}
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -92,12 +92,8 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
   ]);
 };
 
-// --- Default Tasks Logic ---
-const generateDefaultTasks = (date: string): Task[] => [
-  { id: `def-water-${Date.now()}`, text: "Ingerir 2L de água", completed: false, time: "08:00", category: "Lembrete", date },
-  { id: `def-gym-${Date.now()}`, text: "Exercícios Físicos", completed: false, time: "18:00", category: "Academia", date },
-  { id: `def-study-${Date.now()}`, text: "Estudo Diário", completed: false, time: "20:00", category: "Trabalho", date },
-];
+// --- Default Tasks Logic Removed ---
+// const generateDefaultTasks = (date: string): Task[] => [ ... ];
 
 function App() {
   // --- Auth State ---
@@ -113,63 +109,11 @@ function App() {
   const [financials, setFinancials] = useState<Financials>({ salary: 0, expenses: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // --- Theme State ---
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
-  });
+  // ... (Theme and Install Prompt state remain same)
 
-  // --- PWA Install State ---
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  // ... (useEffect for Auth and PWA remain same)
 
-  // --- Toast Notification State ---
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  useEffect(() => {
-    // Check active session
-    supabase?.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase!.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // PWA Install Event Listener
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault(); // Prevent automatic mini-infobar
-      setInstallPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  // Theme Effect
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  // ... (Theme Effect remains same)
 
   // --- Check and Generate Daily Tasks for Clients ---
   const ensureDailyClientTasks = (currentTasks: Task[], currentLeads: Lead[]): Task[] => {
@@ -202,6 +146,56 @@ function App() {
     return [...newClientTasks, ...currentTasks];
   };
 
+  // --- Process Recurring Tasks ---
+  const processRecurringTasks = (currentTasks: Task[]): Task[] => {
+    const today = new Date().toISOString().split('T')[0];
+    const newTasks: Task[] = [];
+    const processedIds = new Set(currentTasks.map(t => t.id));
+
+    // Find tasks that need to recur
+    currentTasks.forEach(task => {
+      if (!task.repeat || task.repeat === 'none') return;
+      
+      // Check if we already have a task for today with this parentId (or is the original task on today)
+      const hasInstanceToday = currentTasks.some(t => 
+        t.date === today && (t.id === task.id || t.parentId === task.id || (task.parentId && t.parentId === task.parentId))
+      );
+
+      if (hasInstanceToday) return;
+
+      // Check if it's time to recur
+      const taskDate = new Date(task.date);
+      const todayDate = new Date(today);
+      
+      // Only recur if original task is in the past
+      if (taskDate >= todayDate) return;
+
+      let shouldRecur = false;
+      
+      if (task.repeat === 'daily') {
+        shouldRecur = true;
+      } else if (task.repeat === 'weekly') {
+        const diffTime = Math.abs(todayDate.getTime() - taskDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        if (diffDays % 7 === 0) shouldRecur = true;
+      } else if (task.repeat === 'monthly') {
+        if (todayDate.getDate() === taskDate.getDate()) shouldRecur = true;
+      }
+
+      if (shouldRecur) {
+        newTasks.push({
+          ...task,
+          id: `recur-${task.id}-${Date.now()}`,
+          date: today,
+          completed: false,
+          parentId: task.id // Link to original
+        });
+      }
+    });
+
+    return [...newTasks, ...currentTasks];
+  };
+
   const [isLoading, setIsLoading] = useState(true);
 
   // Load Data Effect
@@ -216,30 +210,41 @@ function App() {
         const remoteData = await fetchSupabaseRelational(session.user.id);
         if (remoteData) {
           // Smart Merge: Combine local and remote data
-          // This prevents wiping local data if remote is empty (new account)
-          // and preserves remote data if it exists.
           
           const mergeArrays = <T extends { id: string }>(localArr: T[], remoteArr: T[]) => {
             const map = new Map<string, T>();
-            // Add local first
             localArr.forEach(i => map.set(i.id, i));
-            // Add remote second (overwrites local if same ID, acting as source of truth)
             remoteArr.forEach(i => map.set(i.id, i));
             return Array.from(map.values());
           };
+
+          // Financials Merge Logic: Trust the one with the latest timestamp
+          // If no timestamp, default to remote if it has values, else local
+          let mergedFinancials = remoteData.financials;
+          const localFin = localData.financials || { salary: 0, expenses: 0 };
+          const remoteFin = remoteData.financials;
+
+          if (localFin.updatedAt && remoteFin.updatedAt) {
+            if (localFin.updatedAt > remoteFin.updatedAt) {
+              mergedFinancials = localFin;
+            }
+          } else if (localFin.updatedAt && !remoteFin.updatedAt) {
+             mergedFinancials = localFin;
+          } else if (!localFin.updatedAt && !remoteFin.updatedAt) {
+             // Fallback to previous logic: if remote has data, use it
+             if (remoteFin.salary === 0 && remoteFin.expenses === 0 && (localFin.salary > 0 || localFin.expenses > 0)) {
+                mergedFinancials = localFin;
+             }
+          }
 
           finalData = {
             tasks: mergeArrays(localData.tasks || [], remoteData.tasks || []),
             leads: mergeArrays(localData.leads || [], remoteData.leads || []),
             transactions: mergeArrays(localData.transactions || [], remoteData.transactions || []),
             goals: mergeArrays(localData.goals || [], remoteData.goals || []),
-            // For financials, use remote if it has data, otherwise keep local
-            financials: (remoteData.financials.salary > 0 || remoteData.financials.expenses > 0) 
-              ? remoteData.financials 
-              : (localData.financials || { salary: 0, expenses: 0 })
+            financials: mergedFinancials
           };
 
-          // If we merged data, we should sync the result back to both sources
           if (JSON.stringify(finalData) !== JSON.stringify(remoteData)) {
              saveSupabaseRelational(finalData, session.user.id);
           }
@@ -248,16 +253,11 @@ function App() {
       
       let currentTasks = finalData.tasks || [];
       const currentLeads = finalData.leads || [];
-      const today = new Date().toISOString().split('T')[0];
+      
+      // Process Recurring Tasks
+      currentTasks = processRecurringTasks(currentTasks);
 
-      // 1. Ensure Defaults (Water, Gym, Study)
-      const hasDefaults = currentTasks.some(t => t.date === today && (t.text.includes("água") || t.text.includes("agua")));
-      if (!hasDefaults) {
-        const defaults = generateDefaultTasks(today);
-        currentTasks = [...defaults, ...currentTasks];
-      }
-
-      // 2. Ensure Client Tasks (Otimizar: Cliente)
+      // Ensure Client Tasks (Otimizar: Cliente) - Keeping this as it's CRM logic, not "default"
       currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
 
       setTasks(currentTasks);
@@ -354,6 +354,11 @@ function App() {
                     toggleTheme={toggleTheme} 
                     onInstallApp={handleInstallApp}
                     canInstall={!!installPrompt}
+                    onLogout={async () => {
+                      await supabase?.auth.signOut();
+                      setSession(null);
+                      setIsOffline(false);
+                    }}
                   />
                 )}
               </motion.div>

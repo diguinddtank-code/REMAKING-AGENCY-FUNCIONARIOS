@@ -7,9 +7,10 @@ interface SettingsViewProps {
   toggleTheme: () => void;
   onInstallApp?: () => void;
   canInstall?: boolean;
+  onLogout: () => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInstallApp, canInstall }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInstallApp, canInstall, onLogout }) => {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -132,7 +133,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, onInsta
         </button>
       </div>
 
-      {/* Account Section Removed */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold text-agency-sub uppercase tracking-widest ml-1">Conta</h3>
+        
+        <button 
+          onClick={onLogout}
+          className="w-full bg-agency-900 border border-agency-800 p-4 rounded-xl flex items-center justify-between active:bg-agency-800 transition-colors group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-red-500/10 rounded-lg text-red-500 border border-red-500/20">
+              <LogOut size={20} />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-white text-base group-hover:text-red-500 transition-colors">Sair da Conta</p>
+              <p className="text-xs text-agency-sub">Encerrar sessão neste dispositivo</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-agency-sub" />
+        </button>
+      </div>
       
       <div className="text-center pb-safe mt-8">
         <p className="text-[10px] text-agency-800 font-mono">REMAKING OS MOBILE v2.2</p>
