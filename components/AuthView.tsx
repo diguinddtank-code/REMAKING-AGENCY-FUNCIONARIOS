@@ -28,11 +28,19 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
         });
         if (error) throw error;
       } else {
-        const { error } = await supabase!.auth.signUp({
+        const { data, error } = await supabase!.auth.signUp({
           email,
           password,
         });
         if (error) throw error;
+        
+        // If session exists, login was successful (email confirmation disabled)
+        if (data.session) {
+          onLogin();
+          return;
+        }
+        
+        // If no session, email confirmation is required
         alert('Verifique seu email para confirmar o cadastro!');
       }
       onLogin();
