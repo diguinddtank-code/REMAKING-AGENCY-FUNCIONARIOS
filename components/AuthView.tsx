@@ -42,6 +42,10 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
         setError("O login por Email/Senha não está habilitado. Vá no painel do Supabase > Authentication > Providers e habilite 'Email'.");
       } else if (err.message.includes("Invalid login credentials")) {
         setError("Email ou senha incorretos.");
+      } else if (err.message.includes("Email not confirmed")) {
+        setError("Email não confirmado. Verifique sua caixa de entrada (e spam) para confirmar o cadastro.");
+      } else if (err.message.includes("User already registered")) {
+        setError("Este email já está cadastrado. Tente fazer login.");
       } else {
         setError(err.message);
       }
@@ -104,8 +108,15 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-xs font-medium">
-              {error}
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-medium">
+              <p>{error}</p>
+              {error.includes("Email não confirmado") && (
+                <p className="mt-2 text-white/70 border-t border-red-500/20 pt-2">
+                  <strong>Importante:</strong> Se você desativou a confirmação de email no Supabase <em>depois</em> de criar a conta, esse usuário ainda está pendente. 
+                  <br/><br/>
+                  Solução: Exclua o usuário no painel do Supabase e crie novamente aqui.
+                </p>
+              )}
             </div>
           )}
 
@@ -126,7 +137,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
 
         <div className="mt-6 text-center space-y-4">
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => { setIsLogin(!isLogin); setError(null); }}
             className="text-agency-sub hover:text-white text-sm transition-colors block w-full"
           >
             {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Entre'}

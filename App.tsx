@@ -282,7 +282,7 @@ function App() {
         setAuthLoading(false);
         setIsLoading(false);
       }
-    }, 8000); // 8 seconds timeout
+    }, 3000); // 3 seconds timeout
     return () => clearTimeout(timer);
   }, [isLoading, authLoading]);
 
