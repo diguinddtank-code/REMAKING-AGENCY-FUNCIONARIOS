@@ -203,73 +203,88 @@ function App() {
     if (authLoading) return;
 
     const loadData = async () => {
-      let localData = getLocalDB();
-      let finalData = localData;
-      
-      if (session?.user) {
-        const remoteData = await fetchSupabaseRelational(session.user.id);
-        if (remoteData) {
-          // Smart Merge: Combine local and remote data
-          
-          const mergeArrays = <T extends { id: string }>(localArr: T[], remoteArr: T[]) => {
-            const map = new Map<string, T>();
-            localArr.forEach(i => map.set(i.id, i));
-            remoteArr.forEach(i => map.set(i.id, i));
-            return Array.from(map.values());
-          };
+      try {
+        let localData = getLocalDB();
+        let finalData = localData;
+        
+        if (session?.user) {
+          const remoteData = await fetchSupabaseRelational(session.user.id);
+          if (remoteData) {
+            // Smart Merge: Combine local and remote data
+            
+            const mergeArrays = <T extends { id: string }>(localArr: T[], remoteArr: T[]) => {
+              const map = new Map<string, T>();
+              localArr.forEach(i => map.set(i.id, i));
+              remoteArr.forEach(i => map.set(i.id, i));
+              return Array.from(map.values());
+            };
 
-          // Financials Merge Logic: Trust the one with the latest timestamp
-          // If no timestamp, default to remote if it has values, else local
-          let mergedFinancials = remoteData.financials;
-          const localFin = localData.financials || { salary: 0, expenses: 0 };
-          const remoteFin = remoteData.financials;
+            // Financials Merge Logic
+            let mergedFinancials = remoteData.financials;
+            const localFin = localData.financials || { salary: 0, expenses: 0 };
+            const remoteFin = remoteData.financials;
 
-          if (localFin.updatedAt && remoteFin.updatedAt) {
-            if (localFin.updatedAt > remoteFin.updatedAt) {
-              mergedFinancials = localFin;
-            }
-          } else if (localFin.updatedAt && !remoteFin.updatedAt) {
-             mergedFinancials = localFin;
-          } else if (!localFin.updatedAt && !remoteFin.updatedAt) {
-             // Fallback to previous logic: if remote has data, use it
-             if (remoteFin.salary === 0 && remoteFin.expenses === 0 && (localFin.salary > 0 || localFin.expenses > 0)) {
+            if (localFin.updatedAt && remoteFin.updatedAt) {
+              if (localFin.updatedAt > remoteFin.updatedAt) {
                 mergedFinancials = localFin;
-             }
-          }
+              }
+            } else if (localFin.updatedAt && !remoteFin.updatedAt) {
+               mergedFinancials = localFin;
+            } else if (!localFin.updatedAt && !remoteFin.updatedAt) {
+               if (remoteFin.salary === 0 && remoteFin.expenses === 0 && (localFin.salary > 0 || localFin.expenses > 0)) {
+                  mergedFinancials = localFin;
+               }
+            }
 
-          finalData = {
-            tasks: mergeArrays(localData.tasks || [], remoteData.tasks || []),
-            leads: mergeArrays(localData.leads || [], remoteData.leads || []),
-            transactions: mergeArrays(localData.transactions || [], remoteData.transactions || []),
-            goals: mergeArrays(localData.goals || [], remoteData.goals || []),
-            financials: mergedFinancials
-          };
+            finalData = {
+              tasks: mergeArrays(localData.tasks || [], remoteData.tasks || []),
+              leads: mergeArrays(localData.leads || [], remoteData.leads || []),
+              transactions: mergeArrays(localData.transactions || [], remoteData.transactions || []),
+              goals: mergeArrays(localData.goals || [], remoteData.goals || []),
+              financials: mergedFinancials
+            };
 
-          if (JSON.stringify(finalData) !== JSON.stringify(remoteData)) {
-             saveSupabaseRelational(finalData, session.user.id);
+            if (JSON.stringify(finalData) !== JSON.stringify(remoteData)) {
+               saveSupabaseRelational(finalData, session.user.id);
+            }
           }
         }
+        
+        let currentTasks = finalData.tasks || [];
+        const currentLeads = finalData.leads || [];
+        
+        // Process Recurring Tasks
+        currentTasks = processRecurringTasks(currentTasks);
+
+        // Ensure Client Tasks
+        currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
+
+        setTasks(currentTasks);
+        setLeads(currentLeads);
+        setGoals(finalData.goals || []);
+        setFinancials(finalData.financials || { salary: 0, expenses: 0 });
+        setTransactions(finalData.transactions || []);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      let currentTasks = finalData.tasks || [];
-      const currentLeads = finalData.leads || [];
-      
-      // Process Recurring Tasks
-      currentTasks = processRecurringTasks(currentTasks);
-
-      // Ensure Client Tasks (Otimizar: Cliente) - Keeping this as it's CRM logic, not "default"
-      currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
-
-      setTasks(currentTasks);
-      setLeads(currentLeads);
-      setGoals(finalData.goals || []);
-      setFinancials(finalData.financials || { salary: 0, expenses: 0 });
-      setTransactions(finalData.transactions || []);
-      setIsLoading(false);
     };
     
     loadData();
   }, [session, authLoading]);
+
+  // Safety Timeout for Loading State
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoading || authLoading) {
+        console.warn("Force clearing loading state after timeout");
+        setAuthLoading(false);
+        setIsLoading(false);
+      }
+    }, 8000); // 8 seconds timeout
+    return () => clearTimeout(timer);
+  }, [isLoading, authLoading]);
 
   // Save Data Effect
   useEffect(() => {
