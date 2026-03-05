@@ -41,7 +41,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
       if (err.message.includes("disabled") || err.message.includes("provider is not enabled")) {
         setError("O login por Email/Senha não está habilitado. Vá no painel do Supabase > Authentication > Providers e habilite 'Email'.");
       } else if (err.message.includes("Invalid login credentials")) {
-        setError("Email ou senha incorretos.");
+        setError("Email ou senha incorretos. Se você acabou de mudar de banco de dados, precisa criar uma nova conta (Cadastrar) antes de entrar.");
       } else if (err.message.includes("Email not confirmed")) {
         setError("Email não confirmado. Verifique sua caixa de entrada (e spam) para confirmar o cadastro.");
       } else if (err.message.includes("User already registered")) {
@@ -158,6 +158,12 @@ const AuthView: React.FC<AuthViewProps> = ({ onLogin, onOffline }) => {
           >
             Continuar sem conta (Offline)
           </button>
+          
+          <div className="pt-4 border-t border-agency-800/50">
+            <p className="text-[10px] text-agency-800 font-mono">
+              Conectado a: {import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] || 'Desconhecido'}
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>
