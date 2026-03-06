@@ -293,53 +293,64 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
               placeholder="Adicionar nova missão..." 
-              className="w-full h-12 md:h-14 pl-11 pr-32 bg-transparent outline-none text-white placeholder:text-agency-sub/50 font-medium text-base md:text-lg"
-            />
-            <input 
-              type="time" 
-              value={newTaskTime}
-              onChange={(e) => setNewTaskTime(e.target.value)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-agency-800 text-white text-xs font-bold rounded px-2 py-1 border border-agency-700 outline-none focus:border-primary-500"
+              className="w-full h-12 md:h-14 pl-11 pr-4 bg-transparent outline-none text-white placeholder:text-agency-sub/50 font-medium text-base md:text-lg"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 px-2 pb-2 md:pb-0 justify-between md:justify-end border-t border-agency-800 md:border-t-0 pt-2 md:pt-0">
-             <div className="flex flex-wrap gap-1">
-              {(['Trabalho', 'Academia', 'Lembrete'] as Task['category'][]).map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`flex-1 sm:flex-none px-2 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${getCategoryColor(cat, selectedCategory === cat)}`}
+          <div className="flex flex-col gap-3 px-2 pb-2">
+             {/* Toolbar Row 1: Time & Recurrence */}
+             <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <div className="flex items-center gap-2 bg-black/40 border border-agency-800 rounded px-2 py-1.5">
+                  <Clock size={14} className="text-agency-sub" />
+                  <input 
+                    type="time" 
+                    value={newTaskTime}
+                    onChange={(e) => setNewTaskTime(e.target.value)}
+                    className="bg-transparent text-white text-xs font-bold outline-none w-20"
+                  />
+                </div>
+
+                <div className="h-6 w-px bg-agency-800 mx-1"></div>
+
+                <select
+                  value={selectedRepeat}
+                  onChange={(e) => setSelectedRepeat(e.target.value as any)}
+                  className="bg-black/40 text-agency-sub text-[10px] font-bold uppercase tracking-wider border border-agency-800 rounded px-2 py-2 outline-none focus:border-primary-500 hover:text-white transition-colors cursor-pointer"
                 >
-                  {cat}
+                  <option value="none">Repetir: Não</option>
+                  <option value="daily">Repetir: Diária</option>
+                  <option value="weekly">Repetir: Semanal</option>
+                  <option value="monthly">Repetir: Mensal</option>
+                </select>
+             </div>
+
+             {/* Toolbar Row 2: Categories & Submit */}
+             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-between border-t border-agency-800 pt-2">
+                <div className="flex flex-wrap gap-1">
+                  {(['Trabalho', 'Academia', 'Lembrete'] as Task['category'][]).map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${getCategoryColor(cat, selectedCategory === cat)}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                
+                <button 
+                  type="submit"
+                  disabled={showSuccess}
+                  className={`w-full sm:w-auto h-10 px-6 rounded flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-wide text-sm ${
+                    showSuccess ? 'bg-success-500 text-white' : 'bg-white text-black hover:bg-gray-200'
+                  }`}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    {showSuccess ? <motion.div key="c"><Check size={20} /></motion.div> : <motion.div key="p">CRIAR MISSÃO</motion.div>}
+                  </AnimatePresence>
                 </button>
-              ))}
-              
-              {/* Repeat Toggle */}
-              <select
-                value={selectedRepeat}
-                onChange={(e) => setSelectedRepeat(e.target.value as any)}
-                className="bg-black text-agency-sub text-[10px] font-bold uppercase tracking-wider border border-agency-800 rounded px-2 py-2 outline-none focus:border-primary-500"
-              >
-                <option value="none">Única</option>
-                <option value="daily">Diária</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensal</option>
-              </select>
-            </div>
-            
-            <button 
-              type="submit"
-              disabled={showSuccess}
-              className={`w-full sm:w-auto h-10 md:h-12 px-6 rounded flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-wide text-sm ${
-                showSuccess ? 'bg-success-500 text-white' : 'bg-white text-black hover:bg-gray-200'
-              }`}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {showSuccess ? <motion.div key="c"><Check size={20} /></motion.div> : <motion.div key="p">ADD</motion.div>}
-              </AnimatePresence>
-            </button>
+             </div>
           </div>
         </div>
       </form>
