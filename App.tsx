@@ -82,11 +82,11 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
       const remoteIds = new Set(remoteItems?.map((i: any) => i[idField]) || []);
       const localIds = new Set(localItems.map(i => i[idField]));
 
-      // 2. Identify deletions
-      const toDelete = [...remoteIds].filter(id => !localIds.has(id));
-      if (toDelete.length > 0) {
-        await supabase!.from(tableName).delete().in(idField, toDelete);
-      }
+      // 2. Identify deletions - DISABLED TO PREVENT ACCIDENTAL DATA LOSS
+      // const toDelete = [...remoteIds].filter(id => !localIds.has(id));
+      // if (toDelete.length > 0) {
+      //   await supabase!.from(tableName).delete().in(idField, toDelete);
+      // }
 
       // 3. Upsert local items (add user_id)
       if (localItems.length > 0) {

@@ -196,6 +196,42 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const currentLevelXp = xp % 100;
   const progressPercentage = (currentLevelXp / 100) * 100;
 
+  const addRoutine = () => {
+    const routineTasks: Task[] = [
+      {
+        id: Date.now().toString() + '-1',
+        text: 'Fazer exercícios físicos',
+        completed: false,
+        date: today,
+        time: '07:00',
+        category: 'Academia',
+        repeat: 'daily'
+      },
+      {
+        id: Date.now().toString() + '-2',
+        text: 'Estudar 1h',
+        completed: false,
+        date: today,
+        time: '20:00',
+        category: 'Trabalho',
+        repeat: 'daily'
+      },
+      {
+        id: Date.now().toString() + '-3',
+        text: 'Beber 2L de água',
+        completed: false,
+        date: today,
+        time: '08:00',
+        category: 'Lembrete',
+        repeat: 'daily'
+      }
+    ];
+    
+    setTasks(prev => [...routineTasks, ...prev]);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 1500);
+  };
+
   return (
     <div className="max-w-4xl mx-auto pb-24 relative">
       {/* Floating XP Animations */}
@@ -219,11 +255,16 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
           <h2 className="text-3xl font-bold text-white tracking-tighter mb-1">Missões Diárias</h2>
           <p className="text-agency-sub text-sm">Cumpra suas metas e suba de nível.</p>
         </div>
-        {permission !== 'granted' && 'Notification' in window && (
-          <button onClick={requestNotificationPermission} className="text-xs font-bold bg-primary-600 text-white px-4 py-2 rounded uppercase tracking-wider hover:bg-primary-500 transition-colors shadow-glow">
-            Ativar Notificações
+        <div className="flex gap-2">
+          <button onClick={addRoutine} className="text-xs font-bold bg-agency-800 text-white px-4 py-2 rounded uppercase tracking-wider hover:bg-agency-700 transition-colors flex items-center gap-2">
+            <Zap size={14} className="text-yellow-500" /> Rotina Boa
           </button>
-        )}
+          {permission !== 'granted' && 'Notification' in window && (
+            <button onClick={requestNotificationPermission} className="text-xs font-bold bg-primary-600 text-white px-4 py-2 rounded uppercase tracking-wider hover:bg-primary-500 transition-colors shadow-glow">
+              Ativar Notificações
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Gamification Header */}
