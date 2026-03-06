@@ -48,12 +48,27 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
   const activeClients = leads.filter(l => l.status === 'Ativo');
   const monthlyRecurring = activeClients.reduce((acc, l) => acc + l.value, 0);
   
-  // Calculate fixed expenses from transactions
-  const calculatedFixedExpenses = transactions.filter(t => t.type === 'expense' && t.isFixed).reduce((acc, t) => acc + t.amount, 0);
-  const displayExpenses = financials.expenses > 0 ? financials.expenses : calculatedFixedExpenses;
+  // Calculate current month's financials
+  const today = new Date();
+  const currentMonthKey = `${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
   
-  const today = new Date().toISOString().split('T')[0];
-  const todaysTasks = tasks.filter(t => t.date === today);
+  const currentMonthTransactions = transactions.filter(t => {
+    const parts = t.date.split('/');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}` === currentMonthKey;
+    }
+    return false;
+  });
+
+  const currentMonthIncome = currentMonthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const currentMonthExpenses = currentMonthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  const todaysTasks = tasks.filter(t => t.date === today.toISOString().split('T')[0]);
   const sortedTasks = [...todaysTasks].sort((a, b) => Number(a.completed) - Number(b.completed));
 
   const pendingTasks = todaysTasks.filter(t => !t.completed);
@@ -76,8 +91,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
   };
 
   // Financial Calculations
-  const remaining = financials.salary - displayExpenses;
-  const expensePercentage = financials.salary > 0 ? Math.min(100, Math.round((displayExpenses / financials.salary) * 100)) : 0;
+  const remaining = currentMonthIncome - currentMonthExpenses;
+  const expensePercentage = currentMonthIncome > 0 ? Math.min(100, Math.round((currentMonthExpenses / currentMonthIncome) * 100)) : 0;
   const isDanger = expensePercentage > 90;
   const isWarning = expensePercentage > 70;
 
@@ -204,32 +219,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ tasks, setTasks, leads, g
 
             <div className="space-y-4 mb-6">
                <div className="space-y-1">
-                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><ArrowUpRight size={10} /> Entradas / Salário</label>
-                 <div className="relative group">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-agency-sub text-xs">R$</span>
-                    <input 
-                      type="number" 
-                      value={financials.salary || ''} 
-                      onChange={(e) => setFinancials({...financials, salary: Number(e.target.value)})}
-                      placeholder="0.00"
-                      className="w-full bg-black border border-agency-800 rounded-lg py-2 pl-8 pr-3 text-sm font-bold text-white focus:border-warning-500 outline-none transition-colors"
-                    />
+                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><ArrowUpRight size={10} /> Entradas (Mês Atual)</label>
+                 <div className="w-full bg-black border border-agency-800 rounded-lg py-2 px-3 text-sm font-bold text-white flex items-center gap-2">
+                    <span className="text-agency-sub text-xs">R$</span>
+                    {currentMonthIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                  </div>
                </div>
                
                <div className="space-y-1">
-                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><TrendingDown size={10} /> Gastos Fixos Médios</label>
-                 <div className="relative group">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-agency-sub text-xs">R$</span>
-                    <input 
-                      type="number" 
-                      value={displayExpenses || ''} 
-                      onChange={(e) => setFinancials({...financials, expenses: Number(e.target.value)})}
-                      placeholder="0.00"
-                      className="w-full bg-black border border-agency-800 rounded-lg py-2 pl-8 pr-3 text-sm font-bold text-white focus:border-red-500 outline-none transition-colors"
-                    />
+                 <label className="text-[10px] uppercase font-bold text-agency-sub tracking-wider flex items-center gap-1"><TrendingDown size={10} /> Saídas (Mês Atual)</label>
+                 <div className="w-full bg-black border border-agency-800 rounded-lg py-2 px-3 text-sm font-bold text-white flex items-center gap-2">
+                    <span className="text-agency-sub text-xs">R$</span>
+                    {currentMonthExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                  </div>
-                 <p className="text-[9px] text-agency-sub mt-1">Sincronizado com Financeiro se vazio.</p>
                </div>
             </div>
 

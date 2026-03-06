@@ -153,16 +153,17 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
     const today = new Date();
     const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     
-    setLeads(leads.map(l => {
+    setLeads(prevLeads => prevLeads.map(l => {
         if (l.id !== leadId) return l;
         
-        const currentStatus = l.payments?.[currentMonthKey] || 'Pending';
+        const currentPayments = l.payments || {};
+        const currentStatus = currentPayments[currentMonthKey] || 'Pending';
         const newStatus = currentStatus === 'Pending' ? 'Paid' : 'Pending';
         
         return { 
             ...l, 
             payments: { 
-                ...l.payments, 
+                ...currentPayments, 
                 [currentMonthKey]: newStatus 
             } 
         };
@@ -515,7 +516,6 @@ const LeadCard = ({ lead, moveLead, deleteLead, openNoteModal, togglePayment, se
 
     return (
       <motion.div 
-        layoutId={lead.id}
         className="bg-black p-4 rounded border border-agency-800 hover:border-primary-500 transition-colors group relative w-full shadow-lg"
       >
         <div className="flex justify-between items-start mb-2 gap-2">

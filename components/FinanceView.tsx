@@ -275,24 +275,24 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
             <div className="p-12 text-center text-agency-sub font-medium">Nenhuma transação registrada.</div>
           ) : (
             filteredTransactions.map((t) => (
-              <div key={t.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors group">
-                <div className="flex items-center gap-4">
+              <div key={t.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-white/5 transition-colors group">
+                <div className="flex items-center gap-4 w-full sm:w-auto overflow-hidden">
                   <div className={`p-2 rounded-xl flex-shrink-0 ${t.type === 'income' ? 'bg-success-500/10 text-success-500' : 'bg-red-500/10 text-red-500'}`}>
                     <DollarSign size={18} />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-white truncate flex items-center gap-2">
-                      {t.description}
-                      {t.isFixed && <span className="text-[10px] bg-primary-500/20 text-primary-500 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Repeat size={10} /> Fixo</span>}
+                      <span className="truncate">{t.description}</span>
+                      {t.isFixed && <span className="flex-shrink-0 text-[10px] bg-primary-500/20 text-primary-500 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Repeat size={10} /> Fixo</span>}
                     </p>
-                    <p className="text-xs text-agency-sub font-medium">{t.date} • {t.category || 'Geral'}</p>
+                    <p className="text-xs text-agency-sub font-medium truncate">{t.date} • {t.category || 'Geral'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`font-bold whitespace-nowrap ${t.type === 'income' ? 'text-success-500' : 'text-red-500'}`}>
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-[52px] sm:pl-0">
+                  <span className={`font-bold whitespace-nowrap text-lg sm:text-base ${t.type === 'income' ? 'text-success-500' : 'text-red-500'}`}>
                     {t.type === 'income' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
-                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button onClick={() => setEditingTrans(t)} className="text-agency-sub hover:text-white p-2">
                       <Edit size={16} />
                     </button>

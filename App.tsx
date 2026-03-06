@@ -53,9 +53,15 @@ const fetchSupabaseRelational = async (userId: string): Promise<AppData | null> 
       return t;
     });
 
+    const sanitizedLeads = (leads.data || []).map((l: any) => ({
+      ...l,
+      payments: l.payments || {},
+      reports: l.reports || []
+    }));
+
     return {
       tasks: tasks.data || [],
-      leads: leads.data || [],
+      leads: sanitizedLeads,
       transactions: formattedTransactions,
       goals: goals.data || [],
       financials: financials.data || { salary: 0, expenses: 0 }
