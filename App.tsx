@@ -93,8 +93,14 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           }
           
           if (tableName === 'transactions') {
-            delete cleanItem.isFixed;
-            delete cleanItem.category; // Remove category to prevent 400 error if column is missing
+            // Ensure isFixed is a boolean
+            cleanItem.isFixed = !!cleanItem.isFixed;
+            
+            // Ensure category is set
+            if (!cleanItem.category) {
+              cleanItem.category = cleanItem.isFixed ? 'Fixo' : 'Geral';
+            }
+
             // Convert DD/MM/YYYY to YYYY-MM-DD for Supabase DATE type
             if (cleanItem.date && cleanItem.date.includes('/')) {
                const parts = cleanItem.date.split('/');
