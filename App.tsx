@@ -87,6 +87,11 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
         const itemsWithUser = localItems.map(item => {
           const cleanItem = { ...item, user_id: userId };
           
+          // Ensure created_at exists for new items to prevent not-null constraint errors
+          if (!cleanItem.created_at) {
+            cleanItem.created_at = new Date().toISOString();
+          }
+          
           if (tableName === 'transactions') {
             delete cleanItem.isFixed;
             delete cleanItem.category; // Remove category to prevent 400 error if column is missing
