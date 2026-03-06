@@ -42,10 +42,21 @@ const fetchSupabaseRelational = async (userId: string): Promise<AppData | null> 
       supabase.from('financials').select('*').eq('user_id', userId).single()
     ]);
 
+    // Convert transactions date from YYYY-MM-DD to DD/MM/YYYY
+    const formattedTransactions = (transactions.data || []).map((t: any) => {
+      if (t.date && t.date.includes('-')) {
+        const [y, m, d] = t.date.split('-');
+        if (y.length === 4) {
+          return { ...t, date: `${d}/${m}/${y}` };
+        }
+      }
+      return t;
+    });
+
     return {
       tasks: tasks.data || [],
       leads: leads.data || [],
-      transactions: transactions.data || [],
+      transactions: formattedTransactions,
       goals: goals.data || [],
       financials: financials.data || { salary: 0, expenses: 0 }
     };
@@ -73,7 +84,32 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
 
       // 3. Upsert local items (add user_id)
       if (localItems.length > 0) {
-        const itemsWithUser = localItems.map(item => ({ ...item, user_id: userId }));
+        const itemsWithUser = localItems.map(item => {
+          const cleanItem = { ...item, user_id: userId };
+          
+          if (tableName === 'transactions') {
+            delete cleanItem.isFixed;
+            // Convert DD/MM/YYYY to YYYY-MM-DD for Supabase DATE type
+            if (cleanItem.date && cleanItem.date.includes('/')) {
+               const parts = cleanItem.date.split('/');
+               if (parts.length === 3) {
+                 cleanItem.date = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+               }
+            }
+          }
+          
+          if (tableName === 'tasks') {
+            delete cleanItem.repeat;
+            delete cleanItem.parentId;
+          }
+          
+          if (tableName === 'crm_leads') {
+            delete cleanItem.payments;
+            delete cleanItem.reports;
+          }
+          
+          return cleanItem;
+        });
         const { error } = await supabase!.from(tableName).upsert(itemsWithUser);
         if (error) console.error(`Error syncing ${tableName}:`, error);
       }
@@ -88,7 +124,11 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
     syncTable('transactions', data.transactions),
     syncTable('goals', data.goals),
     // Financials is a single row per user
-    supabase.from('financials').upsert({ user_id: userId, ...data.financials })
+    supabase.from('financials').upsert({ 
+      user_id: userId, 
+      salary: data.financials.salary,
+      expenses: data.financials.expenses
+    })
   ]);
 };
 
