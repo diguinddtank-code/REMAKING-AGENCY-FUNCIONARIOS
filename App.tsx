@@ -313,6 +313,31 @@ function App() {
     }
   };
 
+  const forceSync = async () => {
+    if (!session?.user) return;
+    try {
+      const remoteData = await fetchSupabaseRelational(session.user.id);
+      if (remoteData) {
+        let currentTasks = remoteData.tasks || [];
+        const currentLeads = remoteData.leads || [];
+        
+        currentTasks = processRecurringTasks(currentTasks);
+
+        setTasks(currentTasks);
+        setLeads(currentLeads);
+        setGoals(remoteData.goals || []);
+        setFinancials(remoteData.financials || { salary: 0, expenses: 0 });
+        setTransactions(remoteData.transactions || []);
+        
+        saveLocalDB(remoteData);
+        showToast('Sincronizado com sucesso!', 'success');
+      }
+    } catch (error) {
+      console.error("Error syncing data:", error);
+      showToast('Erro ao sincronizar.', 'error');
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="h-screen w-screen bg-agency-black flex items-center justify-center">
@@ -336,7 +361,7 @@ function App() {
       
       <div className="flex-1 flex flex-col relative h-full">
         {/* Pass setView to Header for Mobile Navigation */}
-        <Header title={activeView} setView={setActiveView} />
+        <Header title={activeView} setView={setActiveView} onSync={session ? forceSync : undefined} />
         
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 scroll-smooth pb-28 lg:pb-8 pt-4">
           <div className="max-w-7xl mx-auto">

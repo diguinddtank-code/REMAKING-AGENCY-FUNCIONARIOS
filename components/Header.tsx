@@ -1,15 +1,27 @@
-import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Bell, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ViewState } from '../types';
 
 interface HeaderProps {
   title: string;
   setView: (view: ViewState) => void;
+  onSync?: () => Promise<void>;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, setView }) => {
+const Header: React.FC<HeaderProps> = ({ title, setView, onSync }) => {
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    if (!onSync || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   return (
     <header className="h-16 md:h-20 bg-agency-black/80 backdrop-blur-xl border-b border-agency-800 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 flex-shrink-0 pt-safe transition-all duration-300">
@@ -37,6 +49,18 @@ const Header: React.FC<HeaderProps> = ({ title, setView }) => {
             className="bg-transparent border-none outline-none text-sm ml-2 w-full text-white placeholder-agency-800/50"
           />
         </div>
+
+        {/* Sync Button */}
+        {onSync && (
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="relative p-2 text-agency-sub hover:text-white transition-colors active:scale-95 disabled:opacity-50"
+            title="Sincronizar com a nuvem"
+          >
+            <RefreshCw size={20} className={isSyncing ? "animate-spin text-primary-500" : ""} />
+          </button>
+        )}
 
         {/* Notifications */}
         <button className="relative p-2 text-agency-sub hover:text-white transition-colors active:scale-95">
