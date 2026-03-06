@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, Clock, Trash2, Zap, Trophy, Flame, Star, Target } from 'lucide-react';
+import { Check, Clock, Trash2, Zap, Trophy, Flame, Star, Target, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task } from '../types';
 
@@ -20,7 +20,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const [xp, setXp] = useState(0);
   const [level, setLevel] = useState(1);
   const [streak, setStreak] = useState(0);
-  const [floatingXp, setFloatingXp] = useState<{ id: string, x: number, y: number }[]>([]);
+  const [floatingXp, setFloatingXp] = useState<{ id: string, x: number, y: number, amount: number }[]>([]);
   
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const notifiedTasks = useRef(new Set<string>());
@@ -146,12 +146,17 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const toggleTask = (id: string, e?: React.MouseEvent) => {
     setTasks(tasks.map(t => {
       if (t.id === id) {
+        // If task was failed, just reset it to pending without XP change (or maybe penalty reversal? let's keep it simple: reset)
+        if (t.failed) {
+            return { ...t, completed: false, failed: false };
+        }
+
         const isCompleting = !t.completed;
         if (isCompleting) {
           addXp(10);
           updateStreak();
           if (e) {
-            const newFloating = { id: Date.now().toString(), x: e.clientX, y: e.clientY };
+            const newFloating = { id: Date.now().toString(), x: e.clientX, y: e.clientY, amount: 10 };
             setFloatingXp(prev => [...prev, newFloating]);
             setTimeout(() => {
               setFloatingXp(prev => prev.filter(f => f.id !== newFloating.id));
@@ -160,7 +165,34 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
         } else {
           addXp(-10);
         }
-        return { ...t, completed: isCompleting };
+        return { ...t, completed: isCompleting, failed: false };
+      }
+      return t;
+    }));
+  };
+
+  const failTask = (id: string, e?: React.MouseEvent) => {
+    setTasks(tasks.map(t => {
+      if (t.id === id) {
+        if (t.failed) return t; // Already failed
+
+        // If it was completed, remove the XP gained
+        if (t.completed) {
+             addXp(-10);
+        }
+
+        // Apply penalty
+        addXp(-20);
+        
+        if (e) {
+            const newFloating = { id: Date.now().toString(), x: e.clientX, y: e.clientY, amount: -20 };
+            setFloatingXp(prev => [...prev, newFloating]);
+            setTimeout(() => {
+              setFloatingXp(prev => prev.filter(f => f.id !== newFloating.id));
+            }, 1000);
+        }
+
+        return { ...t, completed: false, failed: true };
       }
       return t;
     }));
@@ -237,16 +269,16 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
       {/* Floating XP Animations */}
       <AnimatePresence>
         {floatingXp.map(fxp => (
-          <motion.div
-            key={fxp.id}
-            initial={{ opacity: 1, y: fxp.y - 20, x: fxp.x - 20, scale: 0.5 }}
-            animate={{ opacity: 0, y: fxp.y - 80, x: fxp.x - 20, scale: 1.5 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="fixed z-50 font-bold text-primary-500 pointer-events-none text-xl drop-shadow-[0_0_10px_rgba(242,125,38,0.8)]"
-          >
-            +10 XP
-          </motion.div>
+            <motion.div
+              key={fxp.id}
+              initial={{ opacity: 1, y: fxp.y - 20, x: fxp.x - 20, scale: 0.5 }}
+              animate={{ opacity: 0, y: fxp.y - 80, x: fxp.x - 20, scale: 1.5 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className={`fixed z-50 font-bold pointer-events-none text-xl drop-shadow-[0_0_10px_rgba(0,0,0,0.8)] ${fxp.amount > 0 ? 'text-primary-500' : 'text-red-500'}`}
+            >
+              {fxp.amount > 0 ? '+' : ''}{fxp.amount} XP
+            </motion.div>
         ))}
       </AnimatePresence>
 
@@ -429,20 +461,38 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 className={`group flex items-center p-4 bg-black rounded border transition-all duration-300 ${
-                  task.completed ? 'border-agency-800 opacity-50' : 'border-agency-800 hover:border-primary-500/50 hover:shadow-[0_0_15px_rgba(242,125,38,0.1)]'
+                  task.completed 
+                    ? 'border-agency-800 opacity-50' 
+                    : task.failed 
+                        ? 'border-red-500/50 bg-red-500/5' 
+                        : 'border-agency-800 hover:border-primary-500/50 hover:shadow-[0_0_15px_rgba(242,125,38,0.1)]'
                 }`}
               >
-                <button 
-                  onClick={(e) => toggleTask(task.id, e)}
-                  className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center mr-3 sm:mr-4 transition-all duration-300 ${
-                    task.completed ? 'bg-success-500 border-success-500' : 'border-agency-sub hover:border-primary-500'
-                  }`}
-                >
-                  {task.completed && <Check size={14} className="text-black" />}
-                </button>
+                <div className="flex flex-col gap-1 mr-3 sm:mr-4">
+                    <button 
+                    onClick={(e) => toggleTask(task.id, e)}
+                    className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-300 ${
+                        task.completed ? 'bg-success-500 border-success-500' : 'border-agency-sub hover:border-primary-500'
+                    }`}
+                    >
+                    {task.completed && <Check size={14} className="text-black" />}
+                    </button>
+                    
+                    {!task.completed && !task.failed && (
+                        <button 
+                            onClick={(e) => failTask(task.id, e)}
+                            className="flex-shrink-0 w-6 h-6 rounded border-2 border-agency-sub hover:border-red-500 hover:bg-red-500/20 flex items-center justify-center transition-all duration-300 group/fail"
+                            title="Falhar Missão (-20 XP)"
+                        >
+                            <X size={14} className="text-agency-sub group-hover/fail:text-red-500" />
+                        </button>
+                    )}
+                </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium break-words transition-colors ${task.completed ? 'text-agency-sub line-through' : 'text-white'}`}>
+                  <p className={`text-sm font-medium break-words transition-colors ${
+                      task.completed ? 'text-agency-sub line-through' : task.failed ? 'text-red-500 line-through' : 'text-white'
+                    }`}>
                     {task.text}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-agency-sub">
@@ -453,7 +503,12 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                         {task.repeat === 'daily' ? 'Diária' : task.repeat === 'weekly' ? 'Semanal' : 'Mensal'}
                       </span>
                     )}
-                    {!task.completed && (
+                    {task.failed && (
+                        <span className="font-bold text-red-500 text-[10px] uppercase tracking-wider border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 rounded">
+                            Falhou
+                        </span>
+                    )}
+                    {!task.completed && !task.failed && (
                       <span className="flex items-center gap-1 font-mono text-yellow-500 whitespace-nowrap ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                         +10 XP
                       </span>

@@ -35,6 +35,7 @@ export interface Task {
   id: string;
   text: string;
   completed: boolean;
+  failed?: boolean;
   time: string; // HH:mm
   date: string; // YYYY-MM-DD
   category: 'Trabalho' | 'Academia' | 'Lembrete' | 'Outro';
