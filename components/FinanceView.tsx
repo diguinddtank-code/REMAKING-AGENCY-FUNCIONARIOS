@@ -15,6 +15,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
   const [editingTrans, setEditingTrans] = useState<Transaction | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uniqueMonths = useMemo(() => {
@@ -40,15 +41,25 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
   };
 
   const filteredTransactions = useMemo(() => {
-    if (selectedMonth === 'all') return transactions;
-    return transactions.filter(t => {
-      const parts = t.date.split('/');
-      if (parts.length === 3) {
-        return `${parts[1]}/${parts[2]}` === selectedMonth;
-      }
-      return false;
-    });
-  }, [transactions, selectedMonth]);
+    let filtered = transactions;
+    
+    if (selectedMonth !== 'all') {
+      filtered = filtered.filter(t => {
+        const parts = t.date.split('/');
+        if (parts.length === 3) {
+          return `${parts[1]}/${parts[2]}` === selectedMonth;
+        }
+        return false;
+      });
+    }
+
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(t => t.description.toLowerCase().includes(query));
+    }
+
+    return filtered;
+  }, [transactions, selectedMonth, searchQuery]);
 
   const income = filteredTransactions.filter(t => t.type === 'income').reduce((acc, c) => acc + c.amount, 0);
   const expense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, c) => acc + c.amount, 0);
@@ -171,18 +182,33 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
           <p className="text-agency-sub text-sm">Controle de entradas e saídas.</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-agency-900 border border-agency-800 rounded-xl px-3 py-1.5 w-fit">
-          <Filter size={16} className="text-agency-sub" />
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-transparent text-white text-sm outline-none font-medium cursor-pointer appearance-none pr-4"
-          >
-            <option value="all" className="bg-agency-900">Todos os Meses</option>
-            {uniqueMonths.map(m => (
-              <option key={m} value={m} className="bg-agency-900">{formatMonth(m)}</option>
-            ))}
-          </select>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Search Input */}
+          <div className="flex items-center gap-2 bg-agency-900 border border-agency-800 rounded-xl px-3 py-1.5 w-full sm:w-64">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-agency-sub flex-shrink-0"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input
+              type="text"
+              placeholder="Buscar transação..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent text-white text-sm outline-none font-medium w-full placeholder:text-agency-sub"
+            />
+          </div>
+
+          {/* Month Filter */}
+          <div className="flex items-center gap-2 bg-agency-900 border border-agency-800 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+            <Filter size={16} className="text-agency-sub flex-shrink-0" />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-transparent text-white text-sm outline-none font-medium cursor-pointer appearance-none pr-4 w-full"
+            >
+              <option value="all" className="bg-agency-900">Todos os Meses</option>
+              {uniqueMonths.map(m => (
+                <option key={m} value={m} className="bg-agency-900">{formatMonth(m)}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

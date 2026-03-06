@@ -231,42 +231,25 @@ function App() {
         if (session?.user) {
           const remoteData = await fetchSupabaseRelational(session.user.id);
           if (remoteData) {
-            // Smart Merge: Combine local and remote data
-            
-            const mergeArrays = <T extends { id: string }>(localArr: T[], remoteArr: T[]) => {
-              const map = new Map<string, T>();
-              localArr.forEach(i => map.set(i.id, i));
-              remoteArr.forEach(i => map.set(i.id, i));
-              return Array.from(map.values());
-            };
+            const isRemoteEmpty = 
+              (!remoteData.tasks || remoteData.tasks.length === 0) && 
+              (!remoteData.leads || remoteData.leads.length === 0) && 
+              (!remoteData.transactions || remoteData.transactions.length === 0) && 
+              (!remoteData.goals || remoteData.goals.length === 0);
 
-            // Financials Merge Logic
-            let mergedFinancials = remoteData.financials;
-            const localFin = localData.financials || { salary: 0, expenses: 0 };
-            const remoteFin = remoteData.financials;
+            const isLocalEmpty = 
+              (!localData.tasks || localData.tasks.length === 0) && 
+              (!localData.leads || localData.leads.length === 0) && 
+              (!localData.transactions || localData.transactions.length === 0) && 
+              (!localData.goals || localData.goals.length === 0);
 
-            if (localFin.updatedAt && remoteFin.updatedAt) {
-              if (localFin.updatedAt > remoteFin.updatedAt) {
-                mergedFinancials = localFin;
-              }
-            } else if (localFin.updatedAt && !remoteFin.updatedAt) {
-               mergedFinancials = localFin;
-            } else if (!localFin.updatedAt && !remoteFin.updatedAt) {
-               if (remoteFin.salary === 0 && remoteFin.expenses === 0 && (localFin.salary > 0 || localFin.expenses > 0)) {
-                  mergedFinancials = localFin;
-               }
-            }
-
-            finalData = {
-              tasks: mergeArrays(localData.tasks || [], remoteData.tasks || []),
-              leads: mergeArrays(localData.leads || [], remoteData.leads || []),
-              transactions: mergeArrays(localData.transactions || [], remoteData.transactions || []),
-              goals: mergeArrays(localData.goals || [], remoteData.goals || []),
-              financials: mergedFinancials
-            };
-
-            if (JSON.stringify(finalData) !== JSON.stringify(remoteData)) {
-               saveSupabaseRelational(finalData, session.user.id);
+            if (isRemoteEmpty && !isLocalEmpty) {
+              // Initial sync from local to remote
+              finalData = localData;
+              saveSupabaseRelational(finalData, session.user.id);
+            } else {
+              // Remote is source of truth
+              finalData = remoteData;
             }
           }
         }
