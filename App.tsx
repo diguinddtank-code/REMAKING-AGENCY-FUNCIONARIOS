@@ -89,6 +89,7 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           
           if (tableName === 'transactions') {
             delete cleanItem.isFixed;
+            delete cleanItem.category; // Remove category to prevent 400 error if column is missing
             // Convert DD/MM/YYYY to YYYY-MM-DD for Supabase DATE type
             if (cleanItem.date && cleanItem.date.includes('/')) {
                const parts = cleanItem.date.split('/');
@@ -111,25 +112,35 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           return cleanItem;
         });
         const { error } = await supabase!.from(tableName).upsert(itemsWithUser);
-        if (error) console.error(`Error syncing ${tableName}:`, error);
+        if (error) {
+          console.error(`Error syncing ${tableName}:`, error);
+          throw new Error(`Erro na tabela ${tableName}: ${error.message || error.details || 'Erro desconhecido'}`);
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(`Sync error ${tableName}:`, e);
+      throw e;
     }
   };
 
-  await Promise.all([
-    syncTable('tasks', data.tasks),
-    syncTable('crm_leads', data.leads),
-    syncTable('transactions', data.transactions),
-    syncTable('goals', data.goals),
-    // Financials is a single row per user
-    supabase.from('financials').upsert({ 
-      user_id: userId, 
-      salary: data.financials.salary,
-      expenses: data.financials.expenses
-    })
-  ]);
+  try {
+    await Promise.all([
+      syncTable('tasks', data.tasks),
+      syncTable('crm_leads', data.leads),
+      syncTable('transactions', data.transactions),
+      syncTable('goals', data.goals),
+      // Financials is a single row per user
+      supabase.from('financials').upsert({ 
+        user_id: userId, 
+        salary: data.financials.salary,
+        expenses: data.financials.expenses
+      }).then(({error}) => {
+        if (error) throw new Error(`Erro na tabela financials: ${error.message}`);
+      })
+    ]);
+  } catch (error: any) {
+    throw error;
+  }
 };
 
 // --- Default Tasks Logic Removed ---
@@ -335,8 +346,12 @@ function App() {
     
     if (session?.user) {
       // Debounce Supabase save
-      const timeoutId = setTimeout(() => {
-        saveSupabaseRelational(data, session.user.id);
+      const timeoutId = setTimeout(async () => {
+        try {
+          await saveSupabaseRelational(data, session.user.id);
+        } catch (error: any) {
+          showToast(error.message || 'Erro ao salvar na nuvem', 'error');
+        }
       }, 2000); // Increased debounce to 2s to reduce writes
       
       return () => clearTimeout(timeoutId);

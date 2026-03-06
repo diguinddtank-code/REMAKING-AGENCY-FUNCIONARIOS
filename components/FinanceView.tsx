@@ -68,7 +68,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
   const handleAddTransaction = () => {
     if (!newTrans.description || !newTrans.amount) return;
     const transaction: Transaction = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36).substr(2, 9),
       description: newTrans.description,
       amount: Number(newTrans.amount),
       type: newTrans.type || 'income',
@@ -147,7 +147,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
           if (jsonStr) {
             const parsedTransactions = JSON.parse(jsonStr);
             const newTransactions: Transaction[] = parsedTransactions.map((t: any) => ({
-              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString(36).substr(2, 9),
               description: t.description,
               amount: t.amount,
               type: t.type === 'income' ? 'income' : 'expense',
@@ -285,7 +285,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ transactions, setTransactions
                       {t.description}
                       {t.isFixed && <span className="text-[10px] bg-primary-500/20 text-primary-500 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1"><Repeat size={10} /> Fixo</span>}
                     </p>
-                    <p className="text-xs text-agency-sub font-medium">{t.date} • {t.category}</p>
+                    <p className="text-xs text-agency-sub font-medium">{t.date} • {t.category || 'Geral'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
