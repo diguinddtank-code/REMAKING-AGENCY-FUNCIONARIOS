@@ -167,37 +167,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- Check and Generate Daily Tasks for Clients ---
-  const ensureDailyClientTasks = (currentTasks: Task[], currentLeads: Lead[]): Task[] => {
-    const today = new Date().toISOString().split('T')[0];
-    const activeClients = currentLeads.filter(l => l.status === 'Ativo');
-    
-    // Get existing task texts for today to avoid duplicates
-    const existingTaskTexts = new Set(
-      currentTasks
-        .filter(t => t.date === today)
-        .map(t => t.text)
-    );
-
-    const newClientTasks: Task[] = [];
-    
-    activeClients.forEach(client => {
-      const taskText = `Otimizar: ${client.name}`;
-      if (!existingTaskTexts.has(taskText)) {
-        newClientTasks.push({
-          id: `auto-client-${client.id}-${Date.now()}`,
-          text: taskText,
-          completed: false,
-          time: '09:00',
-          category: 'Trabalho',
-          date: today
-        });
-      }
-    });
-
-    return [...newClientTasks, ...currentTasks];
-  };
-
   // --- Process Recurring Tasks ---
   const processRecurringTasks = (currentTasks: Task[]): Task[] => {
     const today = new Date().toISOString().split('T')[0];
@@ -307,9 +276,6 @@ function App() {
         
         // Process Recurring Tasks
         currentTasks = processRecurringTasks(currentTasks);
-
-        // Ensure Client Tasks
-        currentTasks = ensureDailyClientTasks(currentTasks, currentLeads);
 
         setTasks(currentTasks);
         setLeads(currentLeads);

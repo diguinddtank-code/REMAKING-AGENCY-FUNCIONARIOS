@@ -48,16 +48,7 @@ const CRMView: React.FC<CRMViewProps> = ({ leads, setLeads, tasks, setTasks }) =
       notes: '',
       payments: {}
     };
-    const newTask: Task = {
-      id: `auto-task-${Date.now()}`,
-      text: `Otimizar: ${newLead.name}`,
-      completed: false,
-      date: new Date().toISOString().split('T')[0], 
-      time: '09:00', 
-      category: 'Trabalho'
-    };
     setLeads([...leads, lead]);
-    setTasks(prevTasks => [newTask, ...prevTasks]);
     setIsModalOpen(false);
     setNewLead({ status: 'Potencial' });
 
