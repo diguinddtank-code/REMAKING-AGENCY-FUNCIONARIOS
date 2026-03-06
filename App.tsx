@@ -109,11 +109,63 @@ function App() {
   const [financials, setFinancials] = useState<Financials>({ salary: 0, expenses: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  // ... (Theme and Install Prompt state remain same)
+  // --- Theme State ---
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+  });
 
-  // ... (useEffect for Auth and PWA remain same)
+  // --- PWA Install State ---
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
 
-  // ... (Theme Effect remains same)
+  // --- Toast Notification State ---
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  useEffect(() => {
+    // PWA Install Event Listener
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault(); // Prevent automatic mini-infobar
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Theme Effect
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  useEffect(() => {
+    supabase?.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase!.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // --- Check and Generate Daily Tasks for Clients ---
   const ensureDailyClientTasks = (currentTasks: Task[], currentLeads: Lead[]): Task[] => {
