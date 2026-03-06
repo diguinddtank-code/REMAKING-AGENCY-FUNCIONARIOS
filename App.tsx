@@ -116,8 +116,10 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           }
           
           if (tableName === 'crm_leads') {
-            delete cleanItem.payments;
-            delete cleanItem.reports;
+            // Ensure payments is an object (JSONB)
+            if (!cleanItem.payments) cleanItem.payments = {};
+            // Ensure reports is an array (JSONB)
+            if (!cleanItem.reports) cleanItem.reports = [];
           }
           
           return cleanItem;

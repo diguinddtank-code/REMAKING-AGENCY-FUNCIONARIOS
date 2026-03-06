@@ -11,6 +11,7 @@ interface TasksViewProps {
 const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const [filter, setFilter] = useState<'all' | 'today' | 'pending'>('all');
   const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskTime, setNewTaskTime] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
   const [selectedCategory, setSelectedCategory] = useState<Task['category']>('Trabalho');
   const [selectedRepeat, setSelectedRepeat] = useState<Task['repeat']>('none');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -110,12 +111,13 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
       text: newTaskText,
       completed: false,
       date: today,
-      time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      time: newTaskTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       category: selectedCategory,
       repeat: selectedRepeat
     };
     setTasks([newTask, ...tasks]);
     setNewTaskText('');
+    setNewTaskTime(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 1500);
   };
@@ -291,7 +293,13 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
               placeholder="Adicionar nova missão..." 
-              className="w-full h-12 md:h-14 pl-11 pr-4 bg-transparent outline-none text-white placeholder:text-agency-sub/50 font-medium text-base md:text-lg"
+              className="w-full h-12 md:h-14 pl-11 pr-32 bg-transparent outline-none text-white placeholder:text-agency-sub/50 font-medium text-base md:text-lg"
+            />
+            <input 
+              type="time" 
+              value={newTaskTime}
+              onChange={(e) => setNewTaskTime(e.target.value)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-agency-800 text-white text-xs font-bold rounded px-2 py-1 border border-agency-700 outline-none focus:border-primary-500"
             />
           </div>
 
