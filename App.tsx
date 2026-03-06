@@ -126,6 +126,8 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
         if (error) {
           console.error(`Error syncing ${tableName}:`, error);
           throw new Error(`Erro na tabela ${tableName}: ${error.message || error.details || 'Erro desconhecido'}`);
+        } else {
+          console.log(`Synced ${tableName} successfully`, itemsWithUser);
         }
       }
     } catch (e: any) {
@@ -359,7 +361,9 @@ function App() {
       // Debounce Supabase save
       const timeoutId = setTimeout(async () => {
         try {
+          console.log('Starting Supabase sync...', data);
           await saveSupabaseRelational(data, session.user.id);
+          // showToast('Dados salvos na nuvem', 'success'); // Optional: feedback
         } catch (error: any) {
           showToast(error.message || 'Erro ao salvar na nuvem', 'error');
         }
