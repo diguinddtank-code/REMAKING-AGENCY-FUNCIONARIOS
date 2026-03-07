@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, Clock, Trash2, Zap, Trophy, Flame, Star, Target, X } from 'lucide-react';
+import { Check, Clock, Trash2, Zap, Trophy, Flame, Star, Target, X, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task } from '../types';
 
@@ -25,6 +25,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const notifiedTasks = useRef(new Set<string>());
   
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -73,7 +74,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
       id: Date.now().toString(),
       text: newTaskText,
       completed: false,
-      date: today,
+      date: selectedDate, // Use selected date instead of always today
       time: newTaskTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       category: selectedCategory,
       repeat: selectedRepeat
@@ -165,9 +166,31 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
 
   const filteredTasks = tasks.filter(t => {
     if (filter === 'today') return t.date === today;
-    if (filter === 'pending') return !t.completed;
-    return true;
+    if (filter === 'pending') return !t.completed && t.date === selectedDate;
+    // Default 'all' filter now respects the selected date
+    return t.date === selectedDate;
   });
+
+  const changeDate = (days: number) => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() + days);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+
+  const formatDateDisplay = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const todayDate = new Date(today + 'T00:00:00');
+    const tomorrowDate = new Date(todayDate);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+
+    if (dateString === today) return 'Hoje';
+    if (dateString === tomorrowDate.toISOString().split('T')[0]) return 'Amanhã';
+    if (dateString === yesterdayDate.toISOString().split('T')[0]) return 'Ontem';
+
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   const getCategoryColor = (cat: string, active: boolean) => {
     if (!active) return 'bg-transparent text-agency-sub border-agency-800 hover:text-white';
@@ -260,6 +283,46 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between bg-black/40 border border-agency-800 rounded-lg p-2 mb-6">
+        <button onClick={() => changeDate(-1)} className="p-2 hover:bg-agency-800 rounded-md transition-colors text-agency-sub hover:text-white">
+            <ChevronLeft size={20} />
+        </button>
+        
+        <div className="flex items-center gap-2 relative group">
+            <div className="flex items-center gap-2 cursor-pointer">
+                <CalendarIcon size={16} className="text-primary-500" />
+                <span className="text-sm font-bold text-white uppercase tracking-wider">
+                    {formatDateDisplay(selectedDate)}
+                </span>
+            </div>
+            
+            {/* Hidden Date Input that covers the text/icon for clicking */}
+            <input 
+                type="date" 
+                value={selectedDate}
+                onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+            />
+
+            {selectedDate !== today && (
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation(); // Prevent opening date picker
+                        setSelectedDate(today);
+                    }}
+                    className="ml-2 text-[10px] bg-agency-800 px-2 py-0.5 rounded text-agency-sub hover:text-white transition-colors relative z-20"
+                >
+                    Voltar para Hoje
+                </button>
+            )}
+        </div>
+
+        <button onClick={() => changeDate(1)} className="p-2 hover:bg-agency-800 rounded-md transition-colors text-agency-sub hover:text-white">
+            <ChevronRight size={20} />
+        </button>
       </div>
 
       {/* Gamification Header */}
@@ -393,7 +456,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6 border-b border-agency-800 pb-2">
-        {['all', 'today', 'pending'].map((f) => (
+        {['all', 'pending'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f as any)}
@@ -403,7 +466,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                 : 'text-agency-sub hover:text-white'
             }`}
           >
-            {f === 'all' ? 'Todas' : f === 'today' ? 'Hoje' : 'Pendentes'}
+            {f === 'all' ? 'Todas' : 'Pendentes'}
           </button>
         ))}
       </div>
