@@ -54,6 +54,14 @@ const fetchSupabaseRelational = async (userId: string): Promise<AppData | null> 
       return t;
     });
 
+    const tasksData = (tasks.data || []).map((t: any) => ({
+      ...t,
+      // Handle repeat field: if boolean (from DB), convert to string for App
+      repeat: typeof t.repeat === 'boolean' 
+        ? (t.repeat ? 'daily' : 'none') 
+        : (t.repeat || 'none')
+    }));
+
     const sanitizedLeads = (leads.data || []).map((l: any) => ({
       ...l,
       payments: l.payments || {},
@@ -61,7 +69,7 @@ const fetchSupabaseRelational = async (userId: string): Promise<AppData | null> 
     }));
 
     return {
-      tasks: tasks.data || [],
+      tasks: tasksData,
       leads: sanitizedLeads,
       transactions: formattedTransactions,
       goals: goals.data || [],
@@ -119,6 +127,13 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           
           if (tableName === 'tasks') {
             // repeat and parentId are now supported in Supabase
+            // Sending 'repeat' as string ('daily', 'weekly', 'monthly', 'weekdays', 'none')
+            // User confirmed they will revert the column type to TEXT in Supabase
+            
+            // TEMPORARY FIX: Delete repeat again because the user is still seeing "Could not find column" errors.
+            // This means the column is either missing, hidden, or the schema cache hasn't updated.
+            // We will stop sending it to prevent the app from crashing/erroring on sync.
+            delete cleanItem.repeat;
           }
           
           if (tableName === 'crm_leads') {

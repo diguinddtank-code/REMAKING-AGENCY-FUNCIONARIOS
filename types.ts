@@ -39,7 +39,7 @@ export interface Task {
   time: string; // HH:mm
   date: string; // YYYY-MM-DD
   category: 'Trabalho' | 'Academia' | 'Lembrete' | 'Outro';
-  repeat?: 'none' | 'daily' | 'weekly' | 'monthly';
+  repeat?: 'none' | 'daily' | 'weekly' | 'monthly' | 'weekdays';
   parentId?: string;
 }
 

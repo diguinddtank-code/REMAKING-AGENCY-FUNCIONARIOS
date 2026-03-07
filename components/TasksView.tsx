@@ -148,6 +148,16 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
             if (task.repeat === 'daily') nextDate.setDate(nextDate.getDate() + 1);
             if (task.repeat === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
             if (task.repeat === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+            if (task.repeat === 'weekdays') {
+                const day = nextDate.getDay();
+                if (day === 5) { // Friday -> Monday
+                    nextDate.setDate(nextDate.getDate() + 3);
+                } else if (day === 6) { // Saturday -> Monday
+                    nextDate.setDate(nextDate.getDate() + 2);
+                } else { // Mon-Thurs -> Next Day
+                    nextDate.setDate(nextDate.getDate() + 1);
+                }
+            }
             
             const nextDateString = nextDate.toISOString().split('T')[0];
 
@@ -465,6 +475,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                 >
                   <option value="none">Repetir: Não</option>
                   <option value="daily">Repetir: Diária</option>
+                  <option value="weekdays">Repetir: Seg a Sex</option>
                   <option value="weekly">Repetir: Semanal</option>
                   <option value="monthly">Repetir: Mensal</option>
                 </select>
@@ -573,7 +584,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
                     <span className="flex items-center gap-1 font-mono text-agency-sub whitespace-nowrap"><Clock size={10} /> {task.time}</span>
                     {task.repeat && task.repeat !== 'none' && (
                       <span className="flex items-center gap-1 font-mono text-primary-500 whitespace-nowrap border border-primary-500/30 bg-primary-500/10 px-1.5 py-0.5 rounded uppercase text-[9px]">
-                        {task.repeat === 'daily' ? 'Diária' : task.repeat === 'weekly' ? 'Semanal' : 'Mensal'}
+                        {task.repeat === 'daily' ? 'Diária' : task.repeat === 'weekdays' ? 'Seg-Sex' : task.repeat === 'weekly' ? 'Semanal' : 'Mensal'}
                       </span>
                     )}
                     {task.failed && (
