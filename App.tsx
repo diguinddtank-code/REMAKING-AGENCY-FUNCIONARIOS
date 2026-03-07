@@ -128,12 +128,7 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           if (tableName === 'tasks') {
             // repeat and parentId are now supported in Supabase
             // Sending 'repeat' as string ('daily', 'weekly', 'monthly', 'weekdays', 'none')
-            // User confirmed they will revert the column type to TEXT in Supabase
-            
-            // TEMPORARY FIX: Delete repeat again because the user is still seeing "Could not find column" errors.
-            // This means the column is either missing, hidden, or the schema cache hasn't updated.
-            // We will stop sending it to prevent the app from crashing/erroring on sync.
-            delete cleanItem.repeat;
+            // User confirmed column type is TEXT in Supabase
           }
           
           if (tableName === 'crm_leads') {
@@ -147,6 +142,23 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
         });
         const { error } = await supabase!.from(tableName).upsert(itemsWithUser);
         if (error) {
+          // Fallback for 'tasks' table if 'repeat' column causes schema cache errors
+          if (tableName === 'tasks' && (error.message?.includes('schema cache') || error.message?.includes('repeat'))) {
+             console.warn("Sync failed due to 'repeat' column. Retrying without 'repeat' field...");
+             const itemsWithoutRepeat = itemsWithUser.map(item => {
+                 const { repeat, ...rest } = item;
+                 return rest;
+             });
+             const { error: retryError } = await supabase!.from(tableName).upsert(itemsWithoutRepeat);
+             if (retryError) {
+                 console.error(`Retry failed for ${tableName}:`, retryError);
+                 throw new Error(`Erro na tabela ${tableName} (tentativa 2): ${retryError.message}`);
+             } else {
+                 console.log(`Synced ${tableName} successfully (without repeat field)`);
+                 return; // Success on retry
+             }
+          }
+
           console.error(`Error syncing ${tableName}:`, error);
           throw new Error(`Erro na tabela ${tableName}: ${error.message || error.details || 'Erro desconhecido'}`);
         } else {
