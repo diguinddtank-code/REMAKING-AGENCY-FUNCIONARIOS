@@ -10,6 +10,7 @@ import ReportsView from './components/ReportsView';
 import SettingsView from './components/SettingsView';
 import FinanceView from './components/FinanceView';
 import AuthView from './components/AuthView';
+import NotificationManager from './components/NotificationManager';
 import { ViewState, Task, Lead, Goal, AppData, Financials, Transaction } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle } from 'lucide-react';
@@ -436,6 +437,8 @@ function App() {
         onInstallApp={handleInstallApp}
         canInstall={!!installPrompt}
       />
+      
+      <NotificationManager tasks={tasks} />
       
       <div className="flex-1 flex flex-col relative h-full">
         {/* Pass setView to Header for Mobile Navigation */}

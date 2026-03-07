@@ -58,44 +58,7 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
 
   useEffect(() => {
     if ('Notification' in window) setPermission(Notification.permission);
-    const checkReminders = () => {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      const now = new Date();
-      tasks.forEach(task => {
-        if (task.completed || notifiedTasks.current.has(task.id)) return;
-        const taskDateTime = new Date(`${task.date}T${task.time}`);
-        const diffMs = taskDateTime.getTime() - now.getTime();
-        const diffMinutes = Math.floor(diffMs / 60000);
-        if ((diffMinutes <= 10 && diffMinutes >= 0) || (diffMinutes < 0 && diffMinutes > -2)) {
-          try {
-            const title = `REMAKING: ${task.category}`;
-            const options = {
-              body: diffMinutes <= 0 ? `HORA DE FAZER: ${task.text}` : `Faltam ${diffMinutes} min: "${task.text}"`,
-              icon: 'https://i.imgur.com/kL00omR.png',
-              tag: task.id,
-              renotify: true,
-              silent: false,
-              vibrate: [200, 100, 200]
-            };
-            
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(title, options);
-              });
-            } else {
-              new Notification(title, options as any);
-            }
-            
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-            notifiedTasks.current.add(task.id);
-          } catch (error) { console.error("Erro notificação:", error); }
-        }
-      });
-    };
-    checkReminders();
-    const interval = setInterval(checkReminders, 60000);
-    return () => clearInterval(interval);
-  }, [tasks]);
+  }, []);
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) return;
