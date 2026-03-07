@@ -108,31 +108,78 @@ const TasksView: React.FC<TasksViewProps> = ({ tasks, setTasks }) => {
   };
 
   const toggleTask = (id: string, e?: React.MouseEvent) => {
-    setTasks(tasks.map(t => {
-      if (t.id === id) {
-        // If task was failed, just reset it to pending without XP change (or maybe penalty reversal? let's keep it simple: reset)
-        if (t.failed) {
-            return { ...t, completed: false, failed: false };
+    setTasks(prevTasks => {
+      // Find the task to toggle
+      const taskIndex = prevTasks.findIndex(t => t.id === id);
+      if (taskIndex === -1) return prevTasks;
+      
+      const task = prevTasks[taskIndex];
+      
+      // If task was failed, just reset it to pending without XP change
+      if (task.failed) {
+          const updatedTasks = [...prevTasks];
+          updatedTasks[taskIndex] = { ...task, completed: false, failed: false };
+          return updatedTasks;
+      }
+
+      const isCompleting = !task.completed;
+      let newTasks = [...prevTasks];
+      
+      // Update the toggled task
+      newTasks[taskIndex] = { ...task, completed: isCompleting, failed: false };
+
+      // Handle XP and Streak
+      if (isCompleting) {
+        addXp(10);
+        updateStreak();
+        if (e) {
+          const newFloating = { id: Date.now().toString(), x: e.clientX, y: e.clientY, amount: 10 };
+          setFloatingXp(prev => [...prev, newFloating]);
+          setTimeout(() => {
+            setFloatingXp(prev => prev.filter(f => f.id !== newFloating.id));
+          }, 1000);
         }
 
-        const isCompleting = !t.completed;
-        if (isCompleting) {
-          addXp(10);
-          updateStreak();
-          if (e) {
-            const newFloating = { id: Date.now().toString(), x: e.clientX, y: e.clientY, amount: 10 };
-            setFloatingXp(prev => [...prev, newFloating]);
-            setTimeout(() => {
-              setFloatingXp(prev => prev.filter(f => f.id !== newFloating.id));
-            }, 1000);
-          }
-        } else {
-          addXp(-10);
+        // Handle Recurrence: Create next task if completing a recurring task
+        if (task.repeat && task.repeat !== 'none') {
+            const currentTaskDate = new Date(task.date + 'T12:00:00');
+            const nextDate = new Date(currentTaskDate);
+            
+            if (task.repeat === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+            if (task.repeat === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+            if (task.repeat === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+            
+            const nextDateString = nextDate.toISOString().split('T')[0];
+
+            // Check if next task already exists to prevent duplicates
+            const exists = prevTasks.some(t => 
+                t.text === task.text && 
+                t.date === nextDateString && 
+                t.time === task.time &&
+                t.category === task.category &&
+                !t.completed // Only check pending tasks? Or all? Let's check all to be safe.
+            );
+
+            if (!exists) {
+                const nextTask: Task = {
+                    ...task,
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5), // Unique ID
+                    date: nextDateString,
+                    completed: false,
+                    failed: false,
+                    parentId: task.parentId || task.id // Link to original or parent
+                };
+                // Add to beginning of list
+                newTasks = [nextTask, ...newTasks];
+            }
         }
-        return { ...t, completed: isCompleting, failed: false };
+
+      } else {
+        addXp(-10);
       }
-      return t;
-    }));
+      
+      return newTasks;
+    });
   };
 
   const failTask = (id: string, e?: React.MouseEvent) => {

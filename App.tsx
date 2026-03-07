@@ -118,8 +118,7 @@ const saveSupabaseRelational = async (data: AppData, userId: string) => {
           }
           
           if (tableName === 'tasks') {
-            delete cleanItem.repeat;
-            delete cleanItem.parentId;
+            // repeat and parentId are now supported in Supabase
           }
           
           if (tableName === 'crm_leads') {
